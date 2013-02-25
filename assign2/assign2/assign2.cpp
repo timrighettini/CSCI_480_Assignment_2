@@ -263,15 +263,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	// Do all of the OpenGL initialization stuff
 	glutInit(&argc,argv);
-  
-	/*
-		create a window here..should be double buffered and use depth testing
-  
-	    the code past here will segfault if you don't have a window set up....
-	    replace the exit once you add those calls.
-	*/
-
-	//exit(0);
 
 	// Set up the window
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
