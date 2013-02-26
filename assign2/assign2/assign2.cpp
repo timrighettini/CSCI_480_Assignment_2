@@ -49,6 +49,41 @@ bool saveScreenShotOn = false; // Will determine whether a screenshot is to be s
 int frameNum = 0; // Number of frames created for the animation
 char* fName; // Char array to be used for the correct handling of fileNames
 
+/* Assignment #1 Callback vars*/
+int g_vMousePos[2] = {0, 0};
+int g_iLeftMouseButton = 0;    /* 1 if pressed, 0 if not */
+int g_iMiddleMouseButton = 0;
+int g_iRightMouseButton = 0;
+
+typedef enum { ROTATE, TRANSLATE, SCALE } CONTROLSTATE;
+
+CONTROLSTATE g_ControlState = ROTATE;
+
+/* state of the world */
+float g_vLandRotate[3] = {0.0, 0.0, 0.0};
+float g_vLandTranslate[3] = {0.0, 0.0, 0.0};
+float g_vLandScale[3] = {1.0, 1.0, 1.0};
+
+/***** Values for scaling mouse enabled rotation/translation/scaling to make mouse movement easier*****/
+float translateMultDPI = 0.5;
+float rotationMultDPI = 1;
+float scaleMultDPI = 1;
+/***** *****/
+/* END */
+
+/* New values for the second assignment */
+// These values will hold the vertex on a spline based on control points
+float xVal;
+float yVal;
+float zVal;
+float s = 0.5; // This will contain the s parameter in the C-R formula
+float MAX_LINE_LEN = 0.005; // Will hold how big a line segment should be within a spline
+// These values will hold copies of the control points to be used in spline calculations
+point p0; // Pi-1
+point p1; // Pi
+point p2; // Pi+1
+point p3; // Pi+2
+
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
 {
@@ -96,7 +131,203 @@ void myinit() {	/* setup gl view here */
 
 	// Enable polygon offset
 	glEnable(GL_POLYGON_OFFSET_LINE);
+
+	// Enable GL_POINTS properties
+	glPointSize(7);
+	glEnable(GL_POINT_SMOOTH);
+	glEnable(GL_BLEND);
 }
+
+/* Assignment 1 callbacks */
+/* converts mouse drags into information about 
+rotation/translation/scaling */
+void mousedrag(int x, int y)
+{
+  int vMouseDelta[2] = {x-g_vMousePos[0], y-g_vMousePos[1]};
+  
+  switch (g_ControlState)
+  {
+    case TRANSLATE:  
+      if (g_iLeftMouseButton)
+      {
+        g_vLandTranslate[0] += vMouseDelta[0]*0.01;
+        g_vLandTranslate[1] -= vMouseDelta[1]*0.01;
+      }
+      if (g_iMiddleMouseButton)
+      {
+        g_vLandTranslate[2] += vMouseDelta[1]*0.01;
+      }
+      break;
+    case ROTATE:
+      if (g_iLeftMouseButton)
+      {
+        g_vLandRotate[0] += vMouseDelta[1];
+        g_vLandRotate[1] += vMouseDelta[0];
+      }
+      if (g_iMiddleMouseButton)
+      {
+        g_vLandRotate[2] += vMouseDelta[1];
+      }
+      break;
+    case SCALE:
+      if (g_iLeftMouseButton)
+      {
+        g_vLandScale[0] *= 1.0+vMouseDelta[0]*0.01;
+        g_vLandScale[1] *= 1.0-vMouseDelta[1]*0.01;
+      }
+      if (g_iMiddleMouseButton)
+      {
+        g_vLandScale[2] *= 1.0-vMouseDelta[1]*0.01;
+      }
+      break;
+  }
+  g_vMousePos[0] = x;
+  g_vMousePos[1] = y;
+}
+
+void mouseidle(int x, int y)
+{
+  g_vMousePos[0] = x;
+  g_vMousePos[1] = y;
+}
+
+void mousebutton(int button, int state, int x, int y)
+{
+
+  switch (button)
+  {
+    case GLUT_LEFT_BUTTON:
+      g_iLeftMouseButton = (state==GLUT_DOWN);
+      break;
+    case GLUT_MIDDLE_BUTTON:
+      g_iMiddleMouseButton = (state==GLUT_DOWN);
+      break;
+    case GLUT_RIGHT_BUTTON:
+      g_iRightMouseButton = (state==GLUT_DOWN);
+      break;
+  }
+ 
+  switch(glutGetModifiers())
+  {
+    case GLUT_ACTIVE_CTRL:
+      g_ControlState = TRANSLATE;
+      break;
+    case GLUT_ACTIVE_SHIFT:
+      g_ControlState = SCALE;
+      break;
+    default:
+      g_ControlState = ROTATE;
+      break;
+  }
+
+  g_vMousePos[0] = x;
+  g_vMousePos[1] = y;
+}
+/* END */
+
+/* Assignment 2 Functions */
+void drawControlPoints() {
+	glBegin(GL_POINTS);
+	for (int i = 0; i < g_iNumOfSplines; i++) {
+		for (int j = 1; j < g_Splines[i].numControlPoints; j++) { // Draw the control points, and see if the spline goes through
+			glColor3f(1.0, 0.0, 0.0); 
+			glVertex3f(g_Splines[i].points[j].x, g_Splines[i].points[j].y, g_Splines[i].points[j].z);			
+		}
+	}
+	glEnd();
+}
+
+void drawLine(point v0, point v1) {
+	// Draw the first point	
+	glColor3f(0.0, 1.0, 1.0);
+	glVertex3f(v0.x, v0.y, v0.z);
+	
+	// Draw the second point
+	glColor3f(0.0, 1.0, 1.0);
+	glVertex3f(v1.x, v1.y, v1.z);
+}
+
+
+point getCoordinateXYZ(float u) {
+	point p; // Instantiate the point
+
+	// Use a derived version of the C-R matrix formula
+	p.x = ( p0.x * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
+		  ( p1.x * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
+		  ( p2.x * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
+		  ( p3.x * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
+
+	p.y = ( p0.y * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
+		  ( p1.y * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
+		  ( p2.y * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
+		  ( p3.y * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
+
+	p.z = ( p0.z * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
+		  ( p1.z * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
+		  ( p2.z * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
+		  ( p3.z * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
+	
+	return p;
+}
+
+// Spline Functions for assignment #2
+void drawSpline(float u0, float u1, float maxLineLengthSquared) {
+	float uMidPoint = (u0 + u1) / (float)2; // Get the midpoint between these two values
+	point c0 = getCoordinateXYZ(u0); // Get the coordindate for u0
+	point c1 = getCoordinateXYZ(u1); // Get the coordindate for u1
+
+	// Get the distance between these two coordinates
+	point distance;
+	distance.x = c1.x - c0.x;
+	distance.y = c1.y - c0.y;
+	distance.z = c1.z - c0.z;
+
+	// Compare the magnitude SQUARED of this vector to maxLineLength squared -- saves on calculating a sqrt()
+	float magnitudeSquared = pow(distance.x, 2) + pow(distance.y, 2) + pow(distance.z, 2);
+
+	// If mag^2 > maxLL^2 -- Do the recursive call with the midpoint
+	if (magnitudeSquared > maxLineLengthSquared) {
+		drawSpline(u0, uMidPoint, maxLineLengthSquared);
+		drawSpline(uMidPoint, u1, maxLineLengthSquared);
+	}	
+	// Else -- Draw the line
+	else {
+		drawLine(c0, c1);
+	}
+}
+
+void drawAllSplines() {
+	for (int i = 0; i < g_iNumOfSplines; i++) {
+		glBegin(GL_LINES);
+		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) {
+			// Start at the second point, because the first point doesn't help attach to the curve at the beginning
+			// End at the third to last point, because the last of the points doesn't help attach to the curve either at the end
+			/* Set the four control points */
+			p0 = g_Splines[i].points[j-1]; // Pi-1
+			p1 = g_Splines[i].points[j]; // Pi
+			p2 = g_Splines[i].points[j+1]; // Pi+1
+			p3 = g_Splines[i].points[j+2]; // Pi+2
+			
+			/* Go into the spline drawing function */
+			drawSpline(0, 1, pow(MAX_LINE_LEN, 2));
+		}
+		glEnd();
+	}
+}
+
+/* represents one control point along the spline
+struct point {
+	double x;
+	double y;
+	double z;
+};
+
+spline struct which contains how many control points, and an array of control points 
+struct spline {
+	int numControlPoints;
+	struct point *points;
+};
+*/
 
 /* Callback functions for Assignment #2 */
 void reshape(int w, int h) { // This function will project the contents of the program correctly
@@ -170,6 +401,33 @@ rotation/translation/scaling */
 
 	glLoadIdentity(); // Reset the Matrix
 
+	/* Test Code for the spline */
+	glPushMatrix(); // Push on the new transformations that are about to be done
+	
+	glTranslatef(
+		(translateMultDPI * -g_vLandTranslate[0]), // Inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
+		(translateMultDPI * g_vLandTranslate[1]),
+		(translateMultDPI * -g_vLandTranslate[2])
+	); // Translate the matrix
+
+	glRotatef(-g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	glRotatef(-g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	glRotatef(g_vLandRotate[2], 0, 0, 1); // Rotate along the z-axis
+
+	glScalef(
+		(scaleMultDPI * g_vLandScale[0]),
+		(scaleMultDPI * g_vLandScale[1]),
+		(scaleMultDPI * g_vLandScale[2])
+	); // Scale the Matrix
+
+	// Draw the control points
+	drawControlPoints();
+
+	// Draw out the splines
+	drawAllSplines();
+
+	glPopMatrix(); // Remove the transformation matrix
+
 	glutSwapBuffers();
 }
 
@@ -184,6 +442,14 @@ void keyPressed(unsigned char key, int x, int y) {
 			saveScreenShotOn = false;
 			frameNum = 0;
 		}		
+	}
+	// Reset Button for Assignment 1 Callbacks
+	if (key == 27) { // Reset the position of the heightfield -- ESC key
+		for (int i = 0; i < 3; i++) {
+			g_vLandRotate[i] = 0.0;
+			g_vLandTranslate[i] = 0.0;
+			g_vLandScale[i] = 1.0;
+		}
 	}
 }
 
@@ -287,6 +553,15 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	// Callback for keyboard function
 	glutKeyboardFunc(keyPressed);
+
+	/* Assignment 1 Callbacks -- Used to test for spline accuracy*/	
+	/* callback for mouse drags */
+	glutMotionFunc(mousedrag);
+	/* callback for idle mouse movement */
+	glutPassiveMotionFunc(mouseidle);
+	/* callback for mouse button changes */
+	glutMouseFunc(mousebutton);
+	/* END */
 
 	/* do initialization */
 	myinit();
