@@ -77,7 +77,7 @@ float xVal;
 float yVal;
 float zVal;
 float s = 0.5; // This will contain the s parameter in the C-R formula
-float MAX_LINE_LEN = 0.005; // Will hold how big a line segment should be within a spline
+float MAX_LINE_LEN = 0.075; // Will hold how big a line segment should be within a spline
 // These values will hold copies of the control points to be used in spline calculations
 point p0; // Pi-1
 point p1; // Pi
@@ -133,9 +133,12 @@ void myinit() {	/* setup gl view here */
 	glEnable(GL_POLYGON_OFFSET_LINE);
 
 	// Enable GL_POINTS properties
-	glPointSize(7);
+	glPointSize(10);
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_BLEND);
+
+	// Enable GL_LINES properties
+	glLineWidth(5);
 }
 
 /* Assignment 1 callbacks */
@@ -239,11 +242,11 @@ void drawControlPoints() {
 
 void drawLine(point v0, point v1) {
 	// Draw the first point	
-	glColor3f(0.0, 1.0, 1.0);
+	glColor3f(1.0, 1.0, 1.0);
 	glVertex3f(v0.x, v0.y, v0.z);
 	
 	// Draw the second point
-	glColor3f(0.0, 1.0, 1.0);
+	glColor3f(1.0, 1.0, 1.0);
 	glVertex3f(v1.x, v1.y, v1.z);
 }
 
@@ -299,7 +302,8 @@ void drawSpline(float u0, float u1, float maxLineLengthSquared) {
 void drawAllSplines() {
 	for (int i = 0; i < g_iNumOfSplines; i++) {
 		glBegin(GL_LINES);
-		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) {
+		int loopCondition = 0; // This value will be used to determine how many segments are drawn for any given spline
+		for (int j = 1; j <= g_Splines[i].numControlPoints - 3; j++) {
 			// Start at the second point, because the first point doesn't help attach to the curve at the beginning
 			// End at the third to last point, because the last of the points doesn't help attach to the curve either at the end
 			/* Set the four control points */
