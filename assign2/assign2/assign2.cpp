@@ -232,7 +232,7 @@ void mousebutton(int button, int state, int x, int y)
 void drawControlPoints() {
 	glBegin(GL_POINTS);
 	for (int i = 0; i < g_iNumOfSplines; i++) {
-		for (int j = 1; j < g_Splines[i].numControlPoints; j++) { // Draw the control points, and see if the spline goes through
+		for (int j = 0; j < g_Splines[i].numControlPoints; j++) { // Draw the control points, and see if the spline goes through
 			glColor3f(1.0, 0.0, 0.0); 
 			glVertex3f(g_Splines[i].points[j].x, g_Splines[i].points[j].y, g_Splines[i].points[j].z);			
 		}
