@@ -549,7 +549,7 @@ rotation/translation/scaling */
 	); // Scale the Matrix
 
 	// Draw the textured skybox
-	drawSkyBox(20.0, 5.0);
+	drawSkyBox(75.0, 5.0);
 	// The first argument controls HOW BIG the skybox actually is
 	// The second argument, assuming that the skybox's center is at 0, 0, shifts the skybox up or down by x amount
 
