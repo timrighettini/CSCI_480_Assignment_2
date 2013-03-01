@@ -128,7 +128,7 @@ void saveScreenshot (char *filename)
 
 void positionCamera() { // This method will set the camera to point and be in the appropriate places
 	gluLookAt(
-		0.0, 0.0, -3.0, // Where camera is placed
+		0.0, 0.0, 3.0, // Where camera is placed
 		0.0, 0.0, 0.0,  // Where the center of the scene is
 		0.0, 1.0, 0.0   // The "up" vector, which in my case, is the Unit Y Vector
 	);
@@ -157,6 +157,10 @@ void myinit() {	/* setup gl view here */
 }
 
 void myinitTexture() {
+	// Load my texture images into memory
+	groundTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
+	skyTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
+
 	if (!groundTexture || !skyTexture) {
 		std::cout << "Ground or Sky Image NOT LOADED into the program, exiting..." << std::endl;
 		exit(1);
@@ -395,17 +399,59 @@ void drawSkyBox(float groundPlaneSize) {
 
 	// Do all of the skybox rendering here!
 
-	
+	// Load in the ground texture
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
 
-	// Draw the ground plane first -- since y is up, use z as the height, as with the heightfield
+	// Draw the ground plane first: xz plane with the lower bound of the sky: xz axis with -y/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, rectangleDown, 0.0);
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, rectangleDown, 0.0);
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, rectangleUp, 0.0);
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, rectangleUp, 0.0);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, -groundPlaneSize/2, rectangleUp);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, -groundPlaneSize/2, rectangleUp);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, -groundPlaneSize/2, rectangleDown);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, -groundPlaneSize/2, rectangleDown);
 	glEnd();
 
-	
+	// Load in the sky texture
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, skyTexture->pix);
+
+	// Draw the sky plane: xy axis with y/2 height from center
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, groundPlaneSize/2, rectangleUp);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, groundPlaneSize/2, rectangleUp);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, groundPlaneSize/2, rectangleDown);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, groundPlaneSize/2, rectangleDown);
+	glEnd();
+
+	// Draw the sky plane: xy axis with -z/2 height from center
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, rectangleDown, -groundPlaneSize/2);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, rectangleDown, -groundPlaneSize/2);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, rectangleUp, -groundPlaneSize/2);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, rectangleUp, -groundPlaneSize/2);
+	glEnd();
+
+	// Draw the sky plane: xy axis with z/2 height from center
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, rectangleDown, groundPlaneSize/2);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, rectangleDown, groundPlaneSize/2);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, rectangleUp, groundPlaneSize/2);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, rectangleUp, groundPlaneSize/2);
+	glEnd();
+
+	// Draw the sky plane: yz axis with -x/2 width from center
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0); glVertex3f(-groundPlaneSize/2, rectangleDown, rectangleLeft);
+		glTexCoord2f(1.0, 0.0); glVertex3f(-groundPlaneSize/2, rectangleDown, rectangleRight);
+		glTexCoord2f(1.0, 1.0); glVertex3f(-groundPlaneSize/2, rectangleUp, rectangleRight);
+		glTexCoord2f(0.0, 1.0); glVertex3f(-groundPlaneSize/2, rectangleUp, rectangleLeft);
+	glEnd();
+
+	// Draw the sky plane: yz axis with x/2 width from center
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0); glVertex3f(groundPlaneSize/2, rectangleDown, rectangleLeft);
+		glTexCoord2f(1.0, 0.0); glVertex3f(groundPlaneSize/2, rectangleDown, rectangleRight);
+		glTexCoord2f(1.0, 1.0); glVertex3f(groundPlaneSize/2, rectangleUp, rectangleRight);
+		glTexCoord2f(0.0, 1.0); glVertex3f(groundPlaneSize/2, rectangleUp, rectangleLeft);
+	glEnd();
 
 	// Disable the texturing
 	glDisable(GL_TEXTURE_2D);
@@ -492,8 +538,8 @@ rotation/translation/scaling */
 		(translateMultDPI * -g_vLandTranslate[2])
 	); // Translate the matrix
 
-	glRotatef(-g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
-	glRotatef(-g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	glRotatef(g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	glRotatef(g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
 	glRotatef(g_vLandRotate[2], 0, 0, 1); // Rotate along the z-axis
 
 	glScalef(
@@ -650,11 +696,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	/* do initializations */
 	myinit(); // Do all of the Basic OpenGL initializations
-
-	// Load my texture images into memory
-	groundTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
-	skyTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
-
 	myinitTexture(); // Do all of the texture related initializations separately
 
 	glutMainLoop();
