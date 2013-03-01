@@ -84,6 +84,21 @@ point p1; // Pi
 point p2; // Pi+1
 point p3; // Pi+2
 
+// These values will be used for the textures
+Pic* groundTexture; // Will hold the image to be used for the ground plane texture
+GLuint groundTextureID; // This value will hold the texture ID for the ground plane
+
+Pic* skyTexture; // Will hold the image to be used for the sky plane texture 
+GLuint skyTextureID; // This value will hold the texture ID for the sky plane
+
+// These values will hold the what the base left/right/top/bottom values a texture plane will be
+float rectangleRight = 0.5;
+float rectangleLeft = -0.5;
+
+float rectangleUp = -0.5;
+float rectangleDown = 0.5;
+/*These values will have to be multipled by -1 when being represented in the z-axis because of the right handed coordinate system*/
+
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
 {
@@ -113,8 +128,8 @@ void saveScreenshot (char *filename)
 
 void positionCamera() { // This method will set the camera to point and be in the appropriate places
 	gluLookAt(
-		0.0, 0.0, -3.0, // Where camera should point
-		0.0, 0.0, 0.0,  // Camera Placement
+		0.0, 0.0, -3.0, // Where camera is placed
+		0.0, 0.0, 0.0,  // Where the center of the scene is
 		0.0, 1.0, 0.0   // The "up" vector, which in my case, is the Unit Y Vector
 	);
 }
@@ -140,6 +155,44 @@ void myinit() {	/* setup gl view here */
 	// Enable GL_LINES properties
 	glLineWidth(5);
 }
+
+void myinitTexture() {
+	if (!groundTexture || !skyTexture) {
+		std::cout << "Ground or Sky Image NOT LOADED into the program, exiting..." << std::endl;
+		exit(1);
+	}
+	else { // Show the BPP for the images
+		std::cout << "BPP groundTexture: " << groundTexture->bpp << std::endl;
+		std::cout << "BPP skyTexture: " << skyTexture->bpp << std::endl;
+	}
+
+	// The images have now been loaded into memory, now let's actually set them up as textures
+
+	// Set up the global texture reference IDs
+	groundTextureID = 0; // Reference variable for the ground texture ID
+	skyTextureID = 1; // Reference variable for the sky texture ID
+
+	// Tell OpenGL to make room for the new textures
+	glGenTextures(1, &groundTextureID);
+	glGenTextures(1, &skyTextureID);
+
+	// I'll do the initial binds and other parameter settings to the ground texture first
+	glBindTexture(GL_TEXTURE_2D, groundTextureID);
+
+	// Set up the texture wrapping parimeters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Repeat the S texture coordinate
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // Repeat the T texture coordinate
+
+	// Set up minmapping (it's got to look good at a distance, right?)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	// I will load in the image data at the start of the display function, since I have two textures to use at a time
+
+	// To test for now, load in the ground plane image to use for a texture
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
+}
+
 
 /* Assignment 1 callbacks */
 /* converts mouse drags into information about 
@@ -333,6 +386,31 @@ struct spline {
 };
 */
 
+void drawSkyBox(float groundPlaneSize) {
+	// Enable OpenGL texturing
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); // Use texture color only -- no lighting
+
+	// Turn on the texturing
+	glEnable(GL_TEXTURE_2D);
+
+	// Do all of the skybox rendering here!
+
+	
+
+	// Draw the ground plane first -- since y is up, use z as the height, as with the heightfield
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, rectangleDown, 0.0);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, rectangleDown, 0.0);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, rectangleUp, 0.0);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, rectangleUp, 0.0);
+	glEnd();
+
+	
+
+	// Disable the texturing
+	glDisable(GL_TEXTURE_2D);
+}
+
 /* Callback functions for Assignment #2 */
 void reshape(int w, int h) { // This function will project the contents of the program correctly
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h); // Set the clipping area of the window to be correct
@@ -423,6 +501,9 @@ rotation/translation/scaling */
 		(scaleMultDPI * g_vLandScale[1]),
 		(scaleMultDPI * g_vLandScale[2])
 	); // Scale the Matrix
+
+	// Draw the textured skybox
+	drawSkyBox(1.0);
 
 	// Draw the control points
 	drawControlPoints();
@@ -567,8 +648,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	glutMouseFunc(mousebutton);
 	/* END */
 
-	/* do initialization */
-	myinit();
+	/* do initializations */
+	myinit(); // Do all of the Basic OpenGL initializations
+
+	// Load my texture images into memory
+	groundTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
+	skyTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
+
+	myinitTexture(); // Do all of the texture related initializations separately
 
 	glutMainLoop();
 
