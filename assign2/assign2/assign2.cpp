@@ -158,7 +158,7 @@ void myinit() {	/* setup gl view here */
 
 void myinitTexture() {
 	// Load my texture images into memory
-	groundTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
+	groundTexture = jpeg_read("testGround.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
 	skyTexture = jpeg_read("test.jpg", NULL); // This will return a Pic struct with information about the image relating to a texture
 
 	if (!groundTexture || !skyTexture) {
@@ -404,10 +404,10 @@ void drawSkyBox(float groundPlaneSize) {
 
 	// Draw the ground plane first: xz plane with the lower bound of the sky: xz axis with -y/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, -groundPlaneSize/2, rectangleUp);
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, -groundPlaneSize/2, rectangleUp);
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, -groundPlaneSize/2, rectangleDown);
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, -groundPlaneSize/2, rectangleDown);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, -groundPlaneSize/2, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, -groundPlaneSize/2, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, -groundPlaneSize/2, rectangleDown * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, -groundPlaneSize/2, rectangleDown * groundPlaneSize);
 	glEnd();
 
 	// Load in the sky texture
@@ -415,42 +415,42 @@ void drawSkyBox(float groundPlaneSize) {
 
 	// Draw the sky plane: xy axis with y/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, groundPlaneSize/2, rectangleUp);
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, groundPlaneSize/2, rectangleUp);
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, groundPlaneSize/2, rectangleDown);
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, groundPlaneSize/2, rectangleDown);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, groundPlaneSize/2, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, groundPlaneSize/2, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, groundPlaneSize/2, rectangleDown * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, groundPlaneSize/2, rectangleDown * groundPlaneSize);
 	glEnd();
 
 	// Draw the sky plane: xy axis with -z/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, rectangleDown, -groundPlaneSize/2);
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, rectangleDown, -groundPlaneSize/2);
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, rectangleUp, -groundPlaneSize/2);
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, rectangleUp, -groundPlaneSize/2);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, rectangleDown * groundPlaneSize, -groundPlaneSize/2);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, rectangleDown * groundPlaneSize, -groundPlaneSize/2);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, rectangleUp   * groundPlaneSize, -groundPlaneSize/2);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, rectangleUp   * groundPlaneSize, -groundPlaneSize/2);
 	glEnd();
 
 	// Draw the sky plane: xy axis with z/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft, rectangleDown, groundPlaneSize/2);
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight, rectangleDown, groundPlaneSize/2);
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight, rectangleUp, groundPlaneSize/2);
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft, rectangleUp, groundPlaneSize/2);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, rectangleDown * groundPlaneSize, groundPlaneSize/2);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, rectangleDown * groundPlaneSize, groundPlaneSize/2);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, rectangleUp   * groundPlaneSize, groundPlaneSize/2);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, rectangleUp   * groundPlaneSize, groundPlaneSize/2);
 	glEnd();
 
 	// Draw the sky plane: yz axis with -x/2 width from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(-groundPlaneSize/2, rectangleDown, rectangleLeft);
-		glTexCoord2f(1.0, 0.0); glVertex3f(-groundPlaneSize/2, rectangleDown, rectangleRight);
-		glTexCoord2f(1.0, 1.0); glVertex3f(-groundPlaneSize/2, rectangleUp, rectangleRight);
-		glTexCoord2f(0.0, 1.0); glVertex3f(-groundPlaneSize/2, rectangleUp, rectangleLeft);
+		glTexCoord2f(0.0, 0.0); glVertex3f(-groundPlaneSize/2, rectangleDown * groundPlaneSize, rectangleLeft  * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f(-groundPlaneSize/2, rectangleDown * groundPlaneSize, rectangleRight * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f(-groundPlaneSize/2, rectangleUp   * groundPlaneSize, rectangleRight * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f(-groundPlaneSize/2, rectangleUp   * groundPlaneSize, rectangleLeft  * groundPlaneSize);
 	glEnd();
 
 	// Draw the sky plane: yz axis with x/2 width from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(groundPlaneSize/2, rectangleDown, rectangleLeft);
-		glTexCoord2f(1.0, 0.0); glVertex3f(groundPlaneSize/2, rectangleDown, rectangleRight);
-		glTexCoord2f(1.0, 1.0); glVertex3f(groundPlaneSize/2, rectangleUp, rectangleRight);
-		glTexCoord2f(0.0, 1.0); glVertex3f(groundPlaneSize/2, rectangleUp, rectangleLeft);
+		glTexCoord2f(0.0, 0.0); glVertex3f(groundPlaneSize/2, rectangleDown * groundPlaneSize, rectangleLeft  * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f(groundPlaneSize/2, rectangleDown * groundPlaneSize, rectangleRight * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f(groundPlaneSize/2, rectangleUp   * groundPlaneSize, rectangleRight * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f(groundPlaneSize/2, rectangleUp   * groundPlaneSize, rectangleLeft  * groundPlaneSize);
 	glEnd();
 
 	// Disable the texturing
@@ -549,7 +549,7 @@ rotation/translation/scaling */
 	); // Scale the Matrix
 
 	// Draw the textured skybox
-	drawSkyBox(1.0);
+	drawSkyBox(10.0);
 
 	// Draw the control points
 	drawControlPoints();
