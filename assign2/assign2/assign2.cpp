@@ -89,7 +89,6 @@ Pic* groundTexture; // Will hold the image to be used for the ground plane textu
 GLuint groundTextureID; // This value will hold the texture ID for the ground plane
 
 Pic* skyTexture; // Will hold the image to be used for the sky plane texture 
-GLuint skyTextureID; // This value will hold the texture ID for the sky plane
 
 // These values will hold the what the base left/right/top/bottom values a texture plane will be
 float rectangleRight = 0.5;
@@ -98,6 +97,14 @@ float rectangleLeft = -0.5;
 float rectangleUp = -0.5;
 float rectangleDown = 0.5;
 /*These values will have to be multipled by -1 when being represented in the z-axis because of the right handed coordinate system*/
+
+// These values will hold the lowest point of a spline and the farthest distance the spline ever reaches from the center -- this will help size and orient the skyBox correctly
+float maxDistSquared = 0; // This value will hold how far the furthest spline point is away from the center, squared
+float maxDist = 0; // This value will hold how far the furthest spline point is away from the center
+float lowestPoint = 0; // The lowest value of any spline coordinate, in terms of y
+
+float FLOOR_SUB = 0; // How far the ground plane will be from the floor relative to the lowest point of the splines
+float MAX_DIST_MULT = 3.75; // How far the skybox will extend out from the farthest point in the spline(s)
 
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
@@ -174,11 +181,9 @@ void myinitTexture() {
 
 	// Set up the global texture reference IDs
 	groundTextureID = 0; // Reference variable for the ground texture ID
-	skyTextureID = 1; // Reference variable for the sky texture ID
 
 	// Tell OpenGL to make room for the new textures
 	glGenTextures(1, &groundTextureID);
-	glGenTextures(1, &skyTextureID);
 
 	// I'll do the initial binds and other parameter settings to the ground texture first
 	glBindTexture(GL_TEXTURE_2D, groundTextureID);
@@ -197,7 +202,31 @@ void myinitTexture() {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
 }
 
+void calculateLowFarPointsSplines() {
+	// Loop through all of the spline values and find the lowest point and the furthest distance away from the center
+	for (int i = 0; i < g_iNumOfSplines; i++) {
+		for (int j = 0; j < g_Splines[i].numControlPoints; j++) {
+			// Get the distance squared for this point
+			float tempDistSquared = (pow(g_Splines[i].points[j].x, 2) + pow(g_Splines[i].points[j].y, 2) + pow(g_Splines[i].points[j].z, 2)); // Get the dot product of the vector
+			if (tempDistSquared > maxDistSquared) {
+				maxDistSquared = tempDistSquared;
+			}
+			if (g_Splines[i].points[j].y < lowestPoint || (i == 0 && j == 0)) {
+				lowestPoint = g_Splines[i].points[j].y;
+			}
+		}	
+	}
+	// Finally, get the raw maximum distance
+	maxDist = sqrt(maxDistSquared);
 
+	FLOOR_SUB = -maxDist/8; // This will keep the skybox reasonably below the lowest point of the coaster
+
+	// Do some print to make sure that the values are right
+	std::cout << "Max Distance Squared: " << maxDistSquared <<  std::endl;
+	std::cout << "Max Distance: " << maxDist <<  std::endl;
+	std::cout << "Lowest Point: " << lowestPoint <<  std::endl;
+	std::cout << "Bottom Skybox Point: " << FLOOR_SUB <<  std::endl;
+}
 /* Assignment 1 callbacks */
 /* converts mouse drags into information about 
 rotation/translation/scaling */
@@ -398,16 +427,17 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	glEnable(GL_TEXTURE_2D);
 
 	// Do all of the skybox rendering here!
+	float halfGroundPlaneSize = groundPlaneSize/2; // Saves on FP divisions
 
 	// Load in the ground texture
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
 
 	// Draw the ground plane first: xz plane with the lower bound of the sky: xz axis with -y/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, -(groundPlaneSize/2) + groundOffset, rectangleUp   * groundPlaneSize);
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, -(groundPlaneSize/2) + groundOffset, rectangleUp   * groundPlaneSize);
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, -(groundPlaneSize/2) + groundOffset, rectangleDown * groundPlaneSize);
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, -(groundPlaneSize/2) + groundOffset, rectangleDown * groundPlaneSize);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, groundOffset, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, groundOffset, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, groundOffset, rectangleDown * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, groundOffset, rectangleDown * groundPlaneSize);
 	glEnd();
 
 	// Load in the sky texture
@@ -415,42 +445,42 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 
 	// Draw the sky plane: xy axis with y/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, (groundPlaneSize/2) + groundOffset, rectangleUp   * groundPlaneSize);
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, (groundPlaneSize/2) + groundOffset, rectangleUp   * groundPlaneSize);
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, (groundPlaneSize/2) + groundOffset, rectangleDown * groundPlaneSize);
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, (groundPlaneSize/2) + groundOffset, rectangleDown * groundPlaneSize);
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, groundPlaneSize + groundOffset, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, groundPlaneSize + groundOffset, rectangleUp   * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, groundPlaneSize + groundOffset, rectangleDown * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, groundPlaneSize + groundOffset, rectangleDown * groundPlaneSize);
 	glEnd();
 
 	// Draw the sky plane: xy axis with -z/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleDown * groundPlaneSize) + groundOffset, -(groundPlaneSize/2));
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleDown * groundPlaneSize) + groundOffset, -(groundPlaneSize/2));
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleUp   * groundPlaneSize) + groundOffset, -(groundPlaneSize/2));
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleUp   * groundPlaneSize) + groundOffset, -(groundPlaneSize/2));
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, -(halfGroundPlaneSize));
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, -(halfGroundPlaneSize));
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, -(halfGroundPlaneSize));
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, -(halfGroundPlaneSize));
 	glEnd();
 
 	// Draw the sky plane: xy axis with z/2 height from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleDown * groundPlaneSize) + groundOffset, (groundPlaneSize/2));
-		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleDown * groundPlaneSize) + groundOffset, (groundPlaneSize/2));
-		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleUp   * groundPlaneSize) + groundOffset, (groundPlaneSize/2));
-		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleUp   * groundPlaneSize) + groundOffset, (groundPlaneSize/2));
+		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, (halfGroundPlaneSize));
+		glTexCoord2f(1.0, 0.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, (halfGroundPlaneSize));
+		glTexCoord2f(1.0, 1.0); glVertex3f(rectangleRight * groundPlaneSize, (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, (halfGroundPlaneSize));
+		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, (halfGroundPlaneSize));
 	glEnd();
 
 	// Draw the sky plane: yz axis with -x/2 width from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f(-(groundPlaneSize/2), (rectangleDown * groundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
-		glTexCoord2f(1.0, 0.0); glVertex3f(-(groundPlaneSize/2), (rectangleDown * groundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
-		glTexCoord2f(1.0, 1.0); glVertex3f(-(groundPlaneSize/2), (rectangleUp   * groundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
-		glTexCoord2f(0.0, 1.0); glVertex3f(-(groundPlaneSize/2), (rectangleUp   * groundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
+		glTexCoord2f(0.0, 0.0); glVertex3f(-(halfGroundPlaneSize), (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f(-(halfGroundPlaneSize), (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f(-(halfGroundPlaneSize), (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f(-(halfGroundPlaneSize), (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
 	glEnd();
 
 	// Draw the sky plane: yz axis with x/2 width from center
 	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0); glVertex3f((groundPlaneSize/2), (rectangleDown * groundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
-		glTexCoord2f(1.0, 0.0); glVertex3f((groundPlaneSize/2), (rectangleDown * groundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
-		glTexCoord2f(1.0, 1.0); glVertex3f((groundPlaneSize/2), (rectangleUp   * groundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
-		glTexCoord2f(0.0, 1.0); glVertex3f((groundPlaneSize/2), (rectangleUp   * groundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
+		glTexCoord2f(0.0, 0.0); glVertex3f((halfGroundPlaneSize), (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
+		glTexCoord2f(1.0, 0.0); glVertex3f((halfGroundPlaneSize), (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
+		glTexCoord2f(1.0, 1.0); glVertex3f((halfGroundPlaneSize), (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleRight * groundPlaneSize);
+		glTexCoord2f(0.0, 1.0); glVertex3f((halfGroundPlaneSize), (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
 	glEnd();
 
 	// Disable the texturing
@@ -549,7 +579,7 @@ rotation/translation/scaling */
 	); // Scale the Matrix
 
 	// Draw the textured skybox
-	drawSkyBox(75.0, 5.0);
+	drawSkyBox(maxDist * MAX_DIST_MULT, lowestPoint + FLOOR_SUB);
 	// The first argument controls HOW BIG the skybox actually is
 	// The second argument, assuming that the skybox's center is at 0, 0, shifts the skybox up or down by x amount
 
@@ -699,6 +729,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	/* do initializations */
 	myinit(); // Do all of the Basic OpenGL initializations
 	myinitTexture(); // Do all of the texture related initializations separately
+	calculateLowFarPointsSplines(); // Get the low points and the max distances away from the center in terms of the spline control points
 
 	glutMainLoop();
 
