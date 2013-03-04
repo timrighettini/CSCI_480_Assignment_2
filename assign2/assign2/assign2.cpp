@@ -106,6 +106,9 @@ float lowestPoint = 0; // The lowest value of any spline coordinate, in terms of
 float FLOOR_SUB = 0; // How far the ground plane will be from the floor relative to the lowest point of the splines
 float MAX_DIST_MULT = 3.75; // How far the skybox will extend out from the farthest point in the spline(s)
 
+// These values will hold the display list for everything to be drawn
+GLuint splineTrackDisplayList; // This value will hold the display list reference
+
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
 {
@@ -388,7 +391,6 @@ void drawSpline(float u0, float u1, float maxLineLengthSquared) {
 void drawAllSplines() {
 	for (int i = 0; i < g_iNumOfSplines; i++) {
 		glBegin(GL_LINES);
-		int loopCondition = 0; // This value will be used to determine how many segments are drawn for any given spline
 		for (int j = 1; j <= g_Splines[i].numControlPoints - 3; j++) {
 			// Start at the second point, because the first point doesn't help attach to the curve at the beginning
 			// End at the third to last point, because the last of the points doesn't help attach to the curve either at the end
@@ -578,16 +580,8 @@ rotation/translation/scaling */
 		(scaleMultDPI * g_vLandScale[2])
 	); // Scale the Matrix
 
-	// Draw the textured skybox
-	drawSkyBox(maxDist * MAX_DIST_MULT, lowestPoint + FLOOR_SUB);
-	// The first argument controls HOW BIG the skybox actually is
-	// The second argument, assuming that the skybox's center is at 0, 0, shifts the skybox up or down by x amount
-
-	// Draw the control points
-	drawControlPoints();
-
-	// Draw out the splines
-	drawAllSplines();
+	// Call the display List
+	glCallList(splineTrackDisplayList);
 
 	glPopMatrix(); // Remove the transformation matrix
 
@@ -675,6 +669,25 @@ int loadSplines(char *argv) {
 	return 0;
 }
 
+void compileDisplayList() { // This function will compile the display list before the program starts
+	splineTrackDisplayList = glGenLists(1); // This value will hold the display list reference
+	
+	glNewList(splineTrackDisplayList, GL_COMPILE);
+		
+		// Draw the textured skybox
+		drawSkyBox(maxDist * MAX_DIST_MULT, lowestPoint + FLOOR_SUB);
+		// The first argument controls HOW BIG the skybox actually is
+		// The second argument, assuming that the skybox's center is at 0, 0, shifts the skybox up or down by x amount
+
+		// Draw the control points
+		drawControlPoints();
+
+		// Draw out the splines
+		drawAllSplines();
+
+	glEndList();
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	// I've set the argv[1] to track.txt.
@@ -730,6 +743,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	myinit(); // Do all of the Basic OpenGL initializations
 	myinitTexture(); // Do all of the texture related initializations separately
 	calculateLowFarPointsSplines(); // Get the low points and the max distances away from the center in terms of the spline control points
+
+	compileDisplayList(); // Compile the display list
 
 	glutMainLoop();
 
