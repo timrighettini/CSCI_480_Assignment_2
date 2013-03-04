@@ -371,6 +371,28 @@ point getCoordinateXYZ(float u) {
 	return p;
 }
 
+point getTagentXYZ(float u) {
+	point p; // Instantiate the point
+
+	// Use a derived version of the C-R matrix formula
+	p.x = ( p0.x * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
+		  ( p1.x * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
+		  ( p2.x * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
+		  ( p3.x * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
+
+	p.y = ( p0.y * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
+		  ( p1.y * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
+		  ( p2.y * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
+		  ( p3.y * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
+
+	p.z = ( p0.z * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
+		  ( p1.z * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
+		  ( p2.z * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
+		  ( p3.z * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
+	
+	return p;
+}
+
 void setCameraPlacement() {
 
 	// Get p0 to p3 to attain the proper point p for the camera placement
@@ -384,9 +406,14 @@ void setCameraPlacement() {
 
 	// Next, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
 
-	point cameraOriginPosition; // Will be the point that the  camera points to as it is traveling along the roller coaster
+	point cameraOriginPosition = getTagentXYZ(distanceIteratorNum); // Will be the point that the  camera points to as it is traveling along the roller coaster
 
-	if (controlPointNum < g_Splines[currentSplineNum].numControlPoints - 2) { // Follow the 
+	cameraOriginPosition.x *= 25;
+	cameraOriginPosition.y *= 25;
+	cameraOriginPosition.z *= 25;
+
+	/*
+	if (controlPointNum < g_Splines[currentSplineNum].numControlPoints - 2) {
 		p0 = g_Splines[currentSplineNum].points[controlPointNum - 1 + 1]; // Pi-1
 		p1 = g_Splines[currentSplineNum].points[controlPointNum + 0 + 1]; // Pi
 		p2 = g_Splines[currentSplineNum].points[controlPointNum + 1 + 1]; // Pi+1
@@ -394,12 +421,7 @@ void setCameraPlacement() {
 
 		cameraOriginPosition = getCoordinateXYZ(distanceIteratorNum);
 	}
-	else {
-		cameraOriginPosition.x = g_Splines[currentSplineNum].points[controlPointNum + 1].x;
-		cameraOriginPosition.y = g_Splines[currentSplineNum].points[controlPointNum + 1].y;
-		cameraOriginPosition.z = g_Splines[currentSplineNum].points[controlPointNum + 1].z;
-	}
-
+	*/
 
 	// Next, get the correct Norm/Bi-Norm vectors
 	/*Coming soon*/
