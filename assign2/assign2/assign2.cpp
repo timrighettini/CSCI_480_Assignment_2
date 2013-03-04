@@ -109,6 +109,15 @@ float MAX_DIST_MULT = 3.75; // How far the skybox will extend out from the farth
 // These values will hold the display list for everything to be drawn
 GLuint splineTrackDisplayList; // This value will hold the display list reference
 
+// Will be used for traveling through a spline, iteratively, and non realistically
+int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
+int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
+float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
+
+// Window Height Values
+int windowX = 640;  
+int windowY = 480; 
+
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
 {
@@ -136,11 +145,11 @@ void saveScreenshot (char *filename)
   pic_free(in);
 }
 
-void positionCamera() { // This method will set the camera to point and be in the appropriate places
+void positionCamera(double eye_x, double eye_y, double eye_z, double center_x, double center_y, double center_z, double up_x, double up_y, double up_z) { // This method will set the camera to point and be in the appropriate places
 	gluLookAt(
-		0.0, 0.0, 3.0, // Where camera is placed
-		0.0, 0.0, 0.0,  // Where the center of the scene is
-		0.0, 1.0, 0.0   // The "up" vector, which in my case, is the Unit Y Vector
+		eye_x, eye_y, eye_z, // Where camera is placed
+		center_x, center_y, center_z,  // Where the center of the scene is
+		up_x, up_y, up_z   // The "up" vector, which in my case, is the Unit Y Vector
 	);
 }
 
@@ -362,6 +371,93 @@ point getCoordinateXYZ(float u) {
 	return p;
 }
 
+void setCameraPlacement() {
+
+	// Get p0 to p3 to attain the proper point p for the camera placement
+	p0 = g_Splines[currentSplineNum].points[controlPointNum-1]; // Pi-1
+	p1 = g_Splines[currentSplineNum].points[controlPointNum]; // Pi
+	p2 = g_Splines[currentSplineNum].points[controlPointNum+1]; // Pi+1
+	p3 = g_Splines[currentSplineNum].points[controlPointNum+2]; // Pi+2
+
+	// Now get the point for the camera placement
+	point camPosition = getCoordinateXYZ(distanceIteratorNum);
+
+	// Next, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
+
+	point cameraOriginPosition; // Will be the point that the  camera points to as it is traveling along the roller coaster
+
+	if (controlPointNum < g_Splines[currentSplineNum].numControlPoints - 2) { // Follow the 
+		p0 = g_Splines[currentSplineNum].points[controlPointNum - 1 + 1]; // Pi-1
+		p1 = g_Splines[currentSplineNum].points[controlPointNum + 0 + 1]; // Pi
+		p2 = g_Splines[currentSplineNum].points[controlPointNum + 1 + 1]; // Pi+1
+		p3 = g_Splines[currentSplineNum].points[controlPointNum + 2 + 1]; // Pi+2
+
+		cameraOriginPosition = getCoordinateXYZ(distanceIteratorNum);
+	}
+	else {
+		cameraOriginPosition.x = g_Splines[currentSplineNum].points[controlPointNum + 1].x;
+		cameraOriginPosition.y = g_Splines[currentSplineNum].points[controlPointNum + 1].y;
+		cameraOriginPosition.z = g_Splines[currentSplineNum].points[controlPointNum + 1].z;
+	}
+
+
+	// Next, get the correct Norm/Bi-Norm vectors
+	/*Coming soon*/
+
+	// Then, get where the camera should be pointing to
+	/*Coming soon*/
+
+	// Finally, set the camera's position
+	glMatrixMode(GL_PROJECTION);
+
+	// Now begin the actual reshaping
+	glLoadIdentity(); // Reset the matrix
+
+	// Set up the perspective projection matrix
+	gluPerspective(60.0, (double)windowX/windowY, 0.01, 1000.0);
+	
+	positionCamera(
+		camPosition.x         , camPosition.y         , camPosition.z, 
+		cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
+		0.0, 1.0, 0.0
+	); // Sets the camera position
+
+	/*
+		Viewing Angle: 60
+		Aspect Ratio: 1.333 (4:3)
+		Near Clipping Plane: 0.01
+		Far  "            ": 1000.0
+	*/
+	// Set the matrix mode back to modelView, so things do not get messed up
+	glMatrixMode(GL_MODELVIEW);
+
+
+	distanceIteratorNum += 0.025;
+
+	std::cout << distanceIteratorNum << std::endl;
+	std::cout << camPosition.x << std::endl;
+	std::cout << camPosition.y << std::endl;
+	std::cout << camPosition.z << std::endl;
+	std::cout << controlPointNum << std::endl;
+
+	if (distanceIteratorNum >= 1) { // Reset u and increment the control point num ++
+		distanceIteratorNum = 0;
+		controlPointNum++;
+		if (controlPointNum == g_Splines[currentSplineNum].numControlPoints - 2) { // If we have reached the end of the spline, reset the control point value and increment the spline currently being traversed
+			controlPointNum = 1;
+			currentSplineNum++;
+			if (currentSplineNum == g_iNumOfSplines) { // Reset currentSplineNum value back to 0 if we have passed the last spline
+				currentSplineNum = 0;
+			}
+		}
+	}
+}
+
+/*
+int controlPointNum = 1; // This is which control point/spline segment the camera is currently pon
+float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
+*/
+
 // Spline Functions for assignment #2
 void drawSpline(float u0, float u1, float maxLineLengthSquared) {
 	float uMidPoint = (u0 + u1) / (float)2; // Get the midpoint between these two values
@@ -502,7 +598,11 @@ void reshape(int w, int h) { // This function will project the contents of the p
 	// Set up the perspective projection matrix
 	gluPerspective(60.0, (double)w/h, 0.01, 1000.0);
 	
-	positionCamera(); // Sets the camera position
+	positionCamera(
+		0.0, 0.0, 0.0, 
+		0.0, 0.0, 1.0, 
+		0.0, 1.0, 0.0
+	); // Sets the camera position
 
 	/*
 		Viewing Angle: 60
@@ -582,6 +682,8 @@ rotation/translation/scaling */
 
 	// Call the display List
 	glCallList(splineTrackDisplayList);
+
+	setCameraPlacement();
 
 	glPopMatrix(); // Remove the transformation matrix
 
@@ -708,7 +810,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	// Set up the window
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-	glutInitWindowSize(640,480);
+	glutInitWindowSize(windowX,windowY);
 	glutInitWindowPosition(200,200);
 	glutCreateWindow(argv[0]);
 
@@ -745,6 +847,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	calculateLowFarPointsSplines(); // Get the low points and the max distances away from the center in terms of the spline control points
 
 	compileDisplayList(); // Compile the display list
+
+	// Initialize the camera traversal globals
+	// Will be used for traveling through a spline, iteratively, and non realistically
+	controlPointNum = 1; // This is which control point/spline segment the camera is currently on
+	currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
+	distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
 
 	glutMainLoop();
 
