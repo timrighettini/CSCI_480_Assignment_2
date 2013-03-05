@@ -21,6 +21,8 @@
 #include <string>
 #include <sstream> 
 
+void calculateInitialVectors(); // Prototype for this function
+
 /* represents one control point along the spline */
 struct point {
 	double x;
@@ -113,10 +115,17 @@ GLuint splineTrackDisplayList; // This value will hold the display list referenc
 int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
+float INCREMENTOR = 0.025; // Will decide how fast the roller coaster should go
 
 // Window Height Values
 int windowX = 640;  
 int windowY = 480; 
+
+// Values for holding tangents, norms, and biNorms
+point tangent_0;
+point norm_0;
+point biNorm_0;
+
 
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
@@ -149,7 +158,7 @@ void positionCamera(double eye_x, double eye_y, double eye_z, double center_x, d
 	gluLookAt(
 		eye_x, eye_y, eye_z, // Where camera is placed
 		center_x, center_y, center_z,  // Where the center of the scene is
-		up_x, up_y, up_z   // The "up" vector, which in my case, is the Unit Y Vector
+		up_x, up_y, up_z   // The "up" vector
 	);
 }
 
@@ -393,6 +402,29 @@ point getTagentXYZ(float u) {
 	return p;
 }
 
+point getCrossProduct(point a, point b) {
+	point c; // The result of the cross product
+
+	c.x = (a.y * b.z) - (a.z * b.y);
+	c.y = (a.z * b.x) - (a.x * b.z);
+	c.z = (a.x * b.y) - (a.y * b.x);
+
+	return c;
+}
+
+point getUnitVector(point a) {
+	// Get the magnitude
+	float aDist = pow(a.x, 2) + pow(a.y, 2) + pow(a.z, 2);
+	aDist = sqrt(aDist);
+
+	// Normalize the vector
+	a.x /= aDist;
+	a.y /= aDist;
+	a.z /= aDist;
+		
+	return a;
+}
+
 void setCameraPlacement() {
 
 	// Get p0 to p3 to attain the proper point p for the camera placement
@@ -406,28 +438,21 @@ void setCameraPlacement() {
 
 	// Next, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
 
-	point cameraOriginPosition = getTagentXYZ(distanceIteratorNum); // Will be the point that the  camera points to as it is traveling along the roller coaster
-
-	cameraOriginPosition.x *= 25;
-	cameraOriginPosition.y *= 25;
-	cameraOriginPosition.z *= 25;
-
-	/*
-	if (controlPointNum < g_Splines[currentSplineNum].numControlPoints - 2) {
-		p0 = g_Splines[currentSplineNum].points[controlPointNum - 1 + 1]; // Pi-1
-		p1 = g_Splines[currentSplineNum].points[controlPointNum + 0 + 1]; // Pi
-		p2 = g_Splines[currentSplineNum].points[controlPointNum + 1 + 1]; // Pi+1
-		p3 = g_Splines[currentSplineNum].points[controlPointNum + 2 + 1]; // Pi+2
-
-		cameraOriginPosition = getCoordinateXYZ(distanceIteratorNum);
-	}
-	*/
+	// Get the tangent for the current coordinate
+	tangent_0 = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
 
 	// Next, get the correct Norm/Bi-Norm vectors
-	/*Coming soon*/
+	
+	// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
+	norm_0 = getUnitVector(getCrossProduct(getUnitVector(biNorm_0), getUnitVector(tangent_0)));
+	biNorm_0 = getUnitVector(getCrossProduct(getUnitVector(tangent_0), getUnitVector(norm_0)));
 
 	// Then, get where the camera should be pointing to
-	/*Coming soon*/
+	point cameraOriginPosition = tangent_0; // Set the tangent to where the camera should be looking towards
+
+	cameraOriginPosition.x *= 200;
+	cameraOriginPosition.y *= 200;
+	cameraOriginPosition.z *= 200;
 
 	// Finally, set the camera's position
 	glMatrixMode(GL_PROJECTION);
@@ -441,7 +466,7 @@ void setCameraPlacement() {
 	positionCamera(
 		camPosition.x         , camPosition.y         , camPosition.z, 
 		cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
-		0.0, 1.0, 0.0
+		biNorm_0.x, biNorm_0.y, biNorm_0.z// 0.0, 1.0, 0.0
 	); // Sets the camera position
 
 	/*
@@ -453,14 +478,17 @@ void setCameraPlacement() {
 	// Set the matrix mode back to modelView, so things do not get messed up
 	glMatrixMode(GL_MODELVIEW);
 
+	distanceIteratorNum += INCREMENTOR;
 
-	distanceIteratorNum += 0.025;
+	// Set the current norm/biNorm to be the previous ones now
+	//norm_0 = norm_1;
+	//biNorm_0 = biNorm_1;
 
-	std::cout << distanceIteratorNum << std::endl;
-	std::cout << camPosition.x << std::endl;
-	std::cout << camPosition.y << std::endl;
-	std::cout << camPosition.z << std::endl;
-	std::cout << controlPointNum << std::endl;
+	//std::cout << distanceIteratorNum << std::endl;
+	//std::cout << camPosition.x << std::endl;
+	//std::cout << camPosition.y << std::endl;
+	//std::cout << camPosition.z << std::endl;
+	//std::cout << controlPointNum << std::endl;
 
 	if (distanceIteratorNum >= 1) { // Reset u and increment the control point num ++
 		distanceIteratorNum = 0;
@@ -471,6 +499,7 @@ void setCameraPlacement() {
 			if (currentSplineNum == g_iNumOfSplines) { // Reset currentSplineNum value back to 0 if we have passed the last spline
 				currentSplineNum = 0;
 			}
+			calculateInitialVectors();
 		}
 	}
 }
@@ -686,6 +715,7 @@ rotation/translation/scaling */
 	/* Test Code for the spline */
 	glPushMatrix(); // Push on the new transformations that are about to be done
 	
+	/*
 	glTranslatef(
 		(translateMultDPI * -g_vLandTranslate[0]), // Inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
 		(translateMultDPI * g_vLandTranslate[1]),
@@ -701,6 +731,7 @@ rotation/translation/scaling */
 		(scaleMultDPI * g_vLandScale[1]),
 		(scaleMultDPI * g_vLandScale[2])
 	); // Scale the Matrix
+	*/
 
 	// Call the display List
 	glCallList(splineTrackDisplayList);
@@ -793,6 +824,29 @@ int loadSplines(char *argv) {
 	return 0;
 }
 
+void calculateInitialVectors() {
+	// Set p0 to p3 to attain the proper vectors for the initialization
+	p0 = g_Splines[currentSplineNum].points[controlPointNum-1]; // Pi-1
+	p1 = g_Splines[currentSplineNum].points[controlPointNum]; // Pi
+	p2 = g_Splines[currentSplineNum].points[controlPointNum+1]; // Pi+1
+	p3 = g_Splines[currentSplineNum].points[controlPointNum+2]; // Pi+2
+
+	// Initialize the beginning tangents
+	tangent_0 = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Initialize this value to the first tangent	
+
+	// Arbitrary vector
+	point arb;
+	arb.x = 0;
+	arb.y = 1;
+	arb.z = 0;
+
+	// Initialize the norms
+	norm_0 = getUnitVector(getCrossProduct(getUnitVector(tangent_0), getUnitVector(arb))); // Get the unit vector for T0 X (1,1,1)
+
+	// Initialize the biNorms
+	biNorm_0 = getUnitVector(getCrossProduct(getUnitVector(tangent_0), getUnitVector(norm_0))); // Get the unit vector for T0 X N0
+}
+
 void compileDisplayList() { // This function will compile the display list before the program starts
 	splineTrackDisplayList = glGenLists(1); // This value will hold the display list reference
 	
@@ -875,6 +929,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 	currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 	distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
+
+	// Calculate the initial Tangents, Norms, and BiNorms
+	calculateInitialVectors();
 
 	glutMainLoop();
 
