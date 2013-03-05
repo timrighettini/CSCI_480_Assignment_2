@@ -122,10 +122,13 @@ int windowX = 640;
 int windowY = 480; 
 
 // Values for holding tangents, norms, and biNorms
-point tangent_0;
-point norm_0;
-point biNorm_0;
+point tangent_prev;
+point norm_prev;
+point biNorm_prev;
 
+point tangent_current;
+point norm_current;
+point biNorm_current;
 
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
@@ -433,22 +436,30 @@ void setCameraPlacement() {
 	p2 = g_Splines[currentSplineNum].points[controlPointNum+1]; // Pi+1
 	p3 = g_Splines[currentSplineNum].points[controlPointNum+2]; // Pi+2
 
+	if (currentSplineNum == 0 && controlPointNum == 1 && distanceIteratorNum == 0) { // Then set up the initial coordinate system
+		calculateInitialVectors();
+	}
+	else { // Get the next coordinate system based upon the previous one
+		// First, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
+		// Get the tangent for the current coordinate
+		tangent_current = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
+
+		// Next, get the correct Norm/Bi-Norm vectors	
+		// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
+		norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
+		biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
+
+		std::cout << (norm_current.x * tangent_current.x) + (norm_current.y * tangent_current.y) + (norm_current.z * tangent_current.z) << std::endl;
+		std::cout << (norm_current.x *  biNorm_current.x) + (norm_current.y *  biNorm_current.y) + (norm_current.z *  biNorm_current.z) << std::endl;
+		std::cout << (biNorm_current.x * tangent_current.x) + (biNorm_current.y * tangent_current.y) + (biNorm_current.z * tangent_current.z) << std::endl;
+		std::cout << (biNorm_current.x * norm_current.x * tangent_current.x) + (biNorm_current.y * norm_current.y * tangent_current.y) + (biNorm_current.z * norm_current.z * tangent_current.z) << std::endl;
+	}
+
 	// Now get the point for the camera placement
 	point camPosition = getCoordinateXYZ(distanceIteratorNum);
 
-	// Next, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
-
-	// Get the tangent for the current coordinate
-	tangent_0 = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
-
-	// Next, get the correct Norm/Bi-Norm vectors
-	
-	// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
-	norm_0 = getUnitVector(getCrossProduct(getUnitVector(biNorm_0), getUnitVector(tangent_0)));
-	biNorm_0 = getUnitVector(getCrossProduct(getUnitVector(tangent_0), getUnitVector(norm_0)));
-
 	// Then, get where the camera should be pointing to
-	point cameraOriginPosition = tangent_0; // Set the tangent to where the camera should be looking towards
+	point cameraOriginPosition = tangent_current; // Set the tangent to where the camera should be looking towards
 
 	cameraOriginPosition.x *= 200;
 	cameraOriginPosition.y *= 200;
@@ -466,7 +477,7 @@ void setCameraPlacement() {
 	positionCamera(
 		camPosition.x         , camPosition.y         , camPosition.z, 
 		cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
-		biNorm_0.x, biNorm_0.y, biNorm_0.z// 0.0, 1.0, 0.0
+		biNorm_current.x, biNorm_current.y, biNorm_current.z// 0.0, 1.0, 0.0
 	); // Sets the camera position
 
 	/*
@@ -481,8 +492,8 @@ void setCameraPlacement() {
 	distanceIteratorNum += INCREMENTOR;
 
 	// Set the current norm/biNorm to be the previous ones now
-	//norm_0 = norm_1;
-	//biNorm_0 = biNorm_1;
+	norm_prev = norm_current;
+	biNorm_prev = biNorm_current;
 
 	//std::cout << distanceIteratorNum << std::endl;
 	//std::cout << camPosition.x << std::endl;
@@ -634,6 +645,10 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 
 	// Disable the texturing
 	glDisable(GL_TEXTURE_2D);
+}
+
+void drawCrossSections() { // Draw the cross sections for the coaster
+
 }
 
 /* Callback functions for Assignment #2 */
@@ -825,14 +840,9 @@ int loadSplines(char *argv) {
 }
 
 void calculateInitialVectors() {
-	// Set p0 to p3 to attain the proper vectors for the initialization
-	p0 = g_Splines[currentSplineNum].points[controlPointNum-1]; // Pi-1
-	p1 = g_Splines[currentSplineNum].points[controlPointNum]; // Pi
-	p2 = g_Splines[currentSplineNum].points[controlPointNum+1]; // Pi+1
-	p3 = g_Splines[currentSplineNum].points[controlPointNum+2]; // Pi+2
-
 	// Initialize the beginning tangents
-	tangent_0 = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Initialize this value to the first tangent	
+	tangent_prev = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Initialize this value to the first tangent	
+	tangent_current = tangent_prev;
 
 	// Arbitrary vector
 	point arb;
@@ -841,10 +851,18 @@ void calculateInitialVectors() {
 	arb.z = 0;
 
 	// Initialize the norms
-	norm_0 = getUnitVector(getCrossProduct(getUnitVector(tangent_0), getUnitVector(arb))); // Get the unit vector for T0 X (1,1,1)
+	norm_prev = getUnitVector(getCrossProduct(getUnitVector(tangent_prev), getUnitVector(arb))); // Get the unit vector for T0 X (1,1,1)
+	norm_current = norm_prev;
 
 	// Initialize the biNorms
-	biNorm_0 = getUnitVector(getCrossProduct(getUnitVector(tangent_0), getUnitVector(norm_0))); // Get the unit vector for T0 X N0
+	biNorm_prev = getUnitVector(getCrossProduct(getUnitVector(tangent_prev), getUnitVector(norm_prev))); // Get the unit vector for T0 X N0
+	biNorm_current = biNorm_prev;
+
+	// Test to see if the values are prependicular to each other
+	std::cout << (norm_prev.x * tangent_prev.x) + (norm_prev.y * tangent_prev.y) + (norm_prev.z * tangent_prev.z) << std::endl;
+	std::cout << (norm_prev.x *  biNorm_prev.x) + (norm_prev.y *  biNorm_prev.y) + (norm_prev.z *  biNorm_prev.z) << std::endl;
+	std::cout << (biNorm_prev.x * tangent_prev.x) + (biNorm_prev.y * tangent_prev.y) + (biNorm_prev.z * tangent_prev.z) << std::endl;
+	std::cout << (biNorm_prev.x * norm_prev.x * tangent_prev.x) + (biNorm_prev.y * norm_prev.y * tangent_prev.y) + (biNorm_prev.z * norm_prev.z * tangent_prev.z) << std::endl;
 }
 
 void compileDisplayList() { // This function will compile the display list before the program starts
@@ -862,6 +880,9 @@ void compileDisplayList() { // This function will compile the display list befor
 
 		// Draw out the splines
 		drawAllSplines();
+
+		// Draw out the rails/crossSections
+		drawCrossSections();
 
 	glEndList();
 }
@@ -928,10 +949,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	// Will be used for traveling through a spline, iteratively, and non realistically
 	controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 	currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
-	distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-
-	// Calculate the initial Tangents, Norms, and BiNorms
-	calculateInitialVectors();
+	distanceIteratorNum = 0; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
 
 	glutMainLoop();
 
