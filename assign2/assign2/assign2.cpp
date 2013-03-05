@@ -20,6 +20,7 @@
 #include <iostream>
 #include <string>
 #include <sstream> 
+#include <vector>
 
 void calculateInitialVectors(); // Prototype for this function
 
@@ -115,7 +116,7 @@ GLuint splineTrackDisplayList; // This value will hold the display list referenc
 int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-float INCREMENTOR = 0.025; // Will decide how fast the roller coaster should go
+float INCREMENTOR = 0.001; // Will decide how fast the roller coaster should go
 
 // Window Height Values
 int windowX = 640;  
@@ -129,6 +130,11 @@ point biNorm_prev;
 point tangent_current;
 point norm_current;
 point biNorm_current;
+
+// Store all Norms and BiNorms at control points -- or else bad things happen because of global -- initialize these arrays when the size number of splines/control points is found
+std::vector<point> cpNorms;
+std::vector<point> cpBiNorms;
+std::vector<point> cpTangents;
 
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
@@ -340,11 +346,12 @@ void mousebutton(int button, int state, int x, int y)
 
 /* Assignment 2 Functions */
 void drawControlPoints() {
+	glPointSize(10);
 	glBegin(GL_POINTS);
 	for (int i = 0; i < g_iNumOfSplines; i++) {
 		for (int j = 0; j < g_Splines[i].numControlPoints; j++) { // Draw the control points, and see if the spline goes through
 			glColor3f(1.0, 0.0, 0.0); 
-			glVertex3f(g_Splines[i].points[j].x, g_Splines[i].points[j].y, g_Splines[i].points[j].z);			
+			glVertex3f(g_Splines[i].points[j].x, g_Splines[i].points[j].y, g_Splines[i].points[j].z);
 		}
 	}
 	glEnd();
@@ -466,6 +473,7 @@ void setCameraPlacement() {
 	cameraOriginPosition.z *= 200;
 
 	// Finally, set the camera's position
+	///*
 	glMatrixMode(GL_PROJECTION);
 
 	// Now begin the actual reshaping
@@ -477,7 +485,7 @@ void setCameraPlacement() {
 	positionCamera(
 		camPosition.x         , camPosition.y         , camPosition.z, 
 		cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
-		biNorm_current.x, biNorm_current.y, biNorm_current.z// 0.0, 1.0, 0.0
+		biNorm_current.x, biNorm_current.y, biNorm_current.z//0.0, 1.0, 0.0
 	); // Sets the camera position
 
 	/*
@@ -565,6 +573,135 @@ void drawAllSplines() {
 	}
 }
 
+void drawRailSection(int splineNumber, int controlPointNumber) {
+	float railRadius = 0.1; // How far the unitized vectors will be scaled for attaining the proper sized rail
+
+	// To Test, let's just draw some points to the screen
+	glColor3f(1.0, 0.0, 1.0); 
+
+	point norm = cpNorms[cpNorms.size() - controlPointNumber];
+	point biNorm = cpBiNorms[cpBiNorms.size() - controlPointNumber];
+	point tangent = cpTangents[cpTangents.size() - controlPointNumber];
+
+	point norm2 = cpNorms[cpNorms.size() - controlPointNumber - 1];
+	point biNorm2 = cpBiNorms[cpBiNorms.size() - controlPointNumber - 1];
+	point tangent2 = cpTangents[cpTangents.size() - controlPointNumber - 1];
+
+	glBegin(GL_LINES);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
+		);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
+		);
+
+	glEnd();
+
+	glBegin(GL_LINES);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
+		);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
+		);
+
+	glEnd();
+
+	glBegin(GL_LINES);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
+		);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
+		);
+
+	glEnd();
+
+	glBegin(GL_LINES);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
+		);
+
+		glVertex3f(
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
+		);
+
+	glEnd();
+}
+
+void getNormals(int splineNumber, int controlPointNumber) {
+	// Get p0 to p3 to attain the proper point p for the point placement
+	p0 = g_Splines[splineNumber].points[controlPointNumber-1]; // Pi-1
+	p1 = g_Splines[splineNumber].points[controlPointNumber  ]; // Pi
+	p2 = g_Splines[splineNumber].points[controlPointNumber+1]; // Pi+1
+	p3 = g_Splines[splineNumber].points[controlPointNumber+2]; // Pi+2
+	
+	// Calculate the vectors
+	if (splineNumber == 0 && controlPointNumber == 1) { // Then calculate the initial vectors for drawing the cross sections
+		calculateInitialVectors();
+	}
+	else { // Update according to the current control point system
+		// First, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
+		// Get the tangent for the current coordinate
+		tangent_current = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
+
+		// Next, get the correct Norm/Bi-Norm vectors	
+		// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
+		norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
+		biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
+	}
+
+	// Set the current norm/biNorm to be the previous ones now
+	norm_prev = norm_current;
+	biNorm_prev = biNorm_current;
+
+	// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
+	cpTangents.push_back(tangent_current);
+	cpNorms.push_back(norm_current);
+	cpBiNorms.push_back(biNorm_current);
+}
+
+void drawCrossSections() { // Draw the cross sections for the coaster
+	// Loop through all of the control points
+	// Get all of the norms for the cross sections
+	for (int i = 0; i < g_iNumOfSplines; i++) {
+		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) { // Draw the control points, and see if the spline goes through
+			getNormals(i, j);
+		}
+	}
+
+
+	// Draw them all out here
+	for (int i = 0; i < g_iNumOfSplines; i++) {
+		for (int j = 1; j < g_Splines[i].numControlPoints - 2 - 1; j++) { // Draw the control points, and see if the spline goes through
+			drawRailSection(i, j);
+		}
+	}
+}
+
 /* represents one control point along the spline
 struct point {
 	double x;
@@ -645,10 +782,6 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 
 	// Disable the texturing
 	glDisable(GL_TEXTURE_2D);
-}
-
-void drawCrossSections() { // Draw the cross sections for the coaster
-
 }
 
 /* Callback functions for Assignment #2 */
@@ -746,7 +879,7 @@ rotation/translation/scaling */
 		(scaleMultDPI * g_vLandScale[1]),
 		(scaleMultDPI * g_vLandScale[2])
 	); // Scale the Matrix
-	*/
+	//*/
 
 	// Call the display List
 	glCallList(splineTrackDisplayList);
@@ -875,14 +1008,16 @@ void compileDisplayList() { // This function will compile the display list befor
 		// The first argument controls HOW BIG the skybox actually is
 		// The second argument, assuming that the skybox's center is at 0, 0, shifts the skybox up or down by x amount
 
+		// Draw out the rails/crossSections
+		drawCrossSections();
+
 		// Draw the control points
 		drawControlPoints();
 
 		// Draw out the splines
 		drawAllSplines();
 
-		// Draw out the rails/crossSections
-		drawCrossSections();
+
 
 	glEndList();
 }
