@@ -473,7 +473,7 @@ void setCameraPlacement() {
 	cameraOriginPosition.z *= 200;
 
 	// Finally, set the camera's position
-	///*
+	/*
 	glMatrixMode(GL_PROJECTION);
 
 	// Now begin the actual reshaping
@@ -495,7 +495,7 @@ void setCameraPlacement() {
 		Far  "            ": 1000.0
 	*/
 	// Set the matrix mode back to modelView, so things do not get messed up
-	glMatrixMode(GL_MODELVIEW);
+	//glMatrixMode(GL_MODELVIEW);
 
 	distanceIteratorNum += INCREMENTOR;
 
@@ -576,6 +576,8 @@ void drawAllSplines() {
 void drawRailSection(int splineNumber, int controlPointNumber) {
 	float railRadius = 0.1; // How far the unitized vectors will be scaled for attaining the proper sized rail
 
+	glLineWidth(2);
+
 	// To Test, let's just draw some points to the screen
 	glColor3f(1.0, 0.0, 1.0); 
 
@@ -589,13 +591,13 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 	glBegin(GL_LINES);
 
-		glVertex3f(
+		glVertex3f( // v0
 			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
 			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
 			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
 		);
 
-		glVertex3f(
+		glVertex3f( // v0 + 1
 			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
@@ -605,13 +607,13 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 	glBegin(GL_LINES);
 
-		glVertex3f(
+		glVertex3f( // v1
 			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
 			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
 			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
 		);
 
-		glVertex3f(
+		glVertex3f( // v1 + 1
 			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
@@ -621,13 +623,13 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 	glBegin(GL_LINES);
 
-		glVertex3f(
+		glVertex3f( // v2
 			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
 			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
 			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
 		);
 
-		glVertex3f(
+		glVertex3f( // v2 + 1
 			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
@@ -637,16 +639,195 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 	glBegin(GL_LINES);
 
-		glVertex3f(
+		glVertex3f( // v3
 			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
 			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
 			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
 		);
 
-		glVertex3f(
+		glVertex3f( // v3 + 1
 			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
 			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
+		);
+
+	glEnd();
+
+	// Draw the six rectangles for the cross section, using the method described in Level 5 on the website
+
+	glColor3f(1.0, 1.0, 0.0); 
+
+	// Draw the front rectangle
+	glBegin(GL_QUADS);
+
+		glVertex3f( // v0
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
+		);
+
+		glVertex3f( // v1
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
+		);
+
+		glVertex3f( // v2
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
+		);
+
+		glVertex3f( // v3
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
+		);
+			
+	glEnd();
+
+	// Draw the back rectangle
+	glBegin(GL_QUADS);
+
+		glVertex3f( // v0 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
+		);
+
+		glVertex3f( // v1 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
+		);
+
+		glVertex3f( // v2 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
+		);
+
+		glVertex3f( // v3 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
+		);
+			
+	glEnd();
+
+	// Draw the right rectangle
+	glBegin(GL_QUADS);
+		
+		glVertex3f( // v0
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
+		);
+
+		glVertex3f( // v0 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
+		);
+
+		glVertex3f( // v1 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
+		);
+
+		glVertex3f( // v1
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
+		);
+
+	glEnd();
+
+	// Draw the top rectangle
+	glBegin(GL_QUADS);
+			
+		glVertex3f( // v1
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
+		);
+
+		glVertex3f( // v1 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
+		);
+
+		glVertex3f( // v2 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
+		);
+
+		glVertex3f( // v2
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
+		);
+
+	glEnd();
+
+	// Draw the left rectangle
+	glBegin(GL_QUADS);
+
+		glVertex3f( // v3
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
+		);
+
+		glVertex3f( // v3 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
+		);
+	
+		glVertex3f( // v2 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
+		);
+
+		glVertex3f( // v2
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
+		);		
+
+			
+	glEnd();
+
+	// Draw the bottom rectangle
+	glBegin(GL_QUADS);
+			
+		glVertex3f( // v0
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
+		);
+
+		glVertex3f( // v0 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
+		);
+
+		glVertex3f( // v3 + 1
+			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
+			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
+		);
+
+		glVertex3f( // v3
+			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
+			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
+			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
 		);
 
 	glEnd();
@@ -863,15 +1044,15 @@ rotation/translation/scaling */
 	/* Test Code for the spline */
 	glPushMatrix(); // Push on the new transformations that are about to be done
 	
-	/*
+	///*
 	glTranslatef(
 		(translateMultDPI * -g_vLandTranslate[0]), // Inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
 		(translateMultDPI * g_vLandTranslate[1]),
 		(translateMultDPI * -g_vLandTranslate[2])
 	); // Translate the matrix
 
-	glRotatef(g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
-	glRotatef(g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	glRotatef(-g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	glRotatef(-g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
 	glRotatef(g_vLandRotate[2], 0, 0, 1); // Rotate along the z-axis
 
 	glScalef(
