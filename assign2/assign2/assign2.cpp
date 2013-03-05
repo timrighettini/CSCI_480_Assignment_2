@@ -587,7 +587,7 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 	for (int i = 0; i < cpNorms[controlPointNumber - 1].size() - 1; i++) {
 
 		// To Test, let's just draw some points to the screen
-		glColor3f(1.0, 0.0, 1.0); 
+		glColor3f(1.0, 0.0, 1.0); // Color for the lines
 
 		point norm; //= cpNorms[cpNorms.size() - controlPointNumber];
 		point biNorm; //= cpBiNorms[cpBiNorms.size() - controlPointNumber];
@@ -675,69 +675,73 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 		// Draw the six rectangles for the cross section, using the method described in Level 5 on the website
 
-		glColor3f(1.0, 1.0, 0.0); 
-
 		// Draw the front rectangle
-		glBegin(GL_QUADS);
+		if (i == 0) { // If this is the first norm section, draw the front quad
+			glColor3f(1.0, 1.0, 0.0); 
+			glBegin(GL_QUADS);
 
-			glVertex3f( // v0
-				position.x + railRadius * (norm.x - biNorm.x), 
-				position.y + railRadius * (norm.y - biNorm.y), 
-				position.z + railRadius * (norm.z - biNorm.z)
-			);
+				glVertex3f( // v0
+					position.x + railRadius * (norm.x - biNorm.x), 
+					position.y + railRadius * (norm.y - biNorm.y), 
+					position.z + railRadius * (norm.z - biNorm.z)
+				);
 
-			glVertex3f( // v1
-				position.x + railRadius * (norm.x + biNorm.x), 
-				position.y + railRadius * (norm.y + biNorm.y), 
-				position.z + railRadius * (norm.z + biNorm.z)
-			);
+				glVertex3f( // v1
+					position.x + railRadius * (norm.x + biNorm.x), 
+					position.y + railRadius * (norm.y + biNorm.y), 
+					position.z + railRadius * (norm.z + biNorm.z)
+				);
 
-			glVertex3f( // v2
-				position.x + railRadius * (-norm.x + biNorm.x), 
-				position.y + railRadius * (-norm.y + biNorm.y), 
-				position.z + railRadius * (-norm.z + biNorm.z)
-			);
+				glVertex3f( // v2
+					position.x + railRadius * (-norm.x + biNorm.x), 
+					position.y + railRadius * (-norm.y + biNorm.y), 
+					position.z + railRadius * (-norm.z + biNorm.z)
+				);
 
-			glVertex3f( // v3
-				position.x + railRadius * (-norm.x - biNorm.x), 
-				position.y + railRadius * (-norm.y - biNorm.y), 
-				position.z + railRadius * (-norm.z - biNorm.z)
-			);
+				glVertex3f( // v3
+					position.x + railRadius * (-norm.x - biNorm.x), 
+					position.y + railRadius * (-norm.y - biNorm.y), 
+					position.z + railRadius * (-norm.z - biNorm.z)
+				);
 			
-		glEnd();
+			glEnd();
+		}
 
 		// Draw the back rectangle
-		glBegin(GL_QUADS);
+		if (i == cpNorms[controlPointNumber - 1].size() - 2) { // If this is the last section of norms, draw the back quad
+			glColor3f(1.0, 1.0, 0.0); 
+			glBegin(GL_QUADS);
 
-			glVertex3f( // v0 + 1
-				position2.x + railRadius * (norm2.x - biNorm2.x), 
-				position2.y + railRadius * (norm2.y - biNorm2.y), 
-				position2.z + railRadius * (norm2.z - biNorm2.z)
-			);
+				glVertex3f( // v0 + 1
+					position2.x + railRadius * (norm2.x - biNorm2.x), 
+					position2.y + railRadius * (norm2.y - biNorm2.y), 
+					position2.z + railRadius * (norm2.z - biNorm2.z)
+				);
 
-			glVertex3f( // v1 + 1
-				position2.x + railRadius * (norm2.x + biNorm2.x), 
-				position2.y + railRadius * (norm2.y + biNorm2.y), 
-				position2.z + railRadius * (norm2.z + biNorm2.z)
-			);
+				glVertex3f( // v1 + 1
+					position2.x + railRadius * (norm2.x + biNorm2.x), 
+					position2.y + railRadius * (norm2.y + biNorm2.y), 
+					position2.z + railRadius * (norm2.z + biNorm2.z)
+				);
 
-			glVertex3f( // v2 + 1
-				position2.x + railRadius * (-norm2.x + biNorm2.x), 
-				position2.y + railRadius * (-norm2.y + biNorm2.y), 
-				position2.z + railRadius * (-norm2.z + biNorm2.z)
-			);
+				glVertex3f( // v2 + 1
+					position2.x + railRadius * (-norm2.x + biNorm2.x), 
+					position2.y + railRadius * (-norm2.y + biNorm2.y), 
+					position2.z + railRadius * (-norm2.z + biNorm2.z)
+				);
 
-			glVertex3f( // v3 + 1
-				position2.x + railRadius * (-norm2.x - biNorm2.x), 
-				position2.y + railRadius * (-norm2.y - biNorm2.y), 
-				position2.z + railRadius * (-norm2.z - biNorm2.z)
-			);
+				glVertex3f( // v3 + 1
+					position2.x + railRadius * (-norm2.x - biNorm2.x), 
+					position2.y + railRadius * (-norm2.y - biNorm2.y), 
+					position2.z + railRadius * (-norm2.z - biNorm2.z)
+				);
 			
-		glEnd();
+			glEnd();
+		}
 
 		// Draw the right rectangle
 		glBegin(GL_QUADS);
-		
+			glColor3f(1.0, 1.0, 0.0); 
 			glVertex3f( // v0
 				position.x + railRadius * (norm.x - biNorm.x), 
 				position.y + railRadius * (norm.y - biNorm.y), 
@@ -766,7 +770,7 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 		// Draw the top rectangle
 		glBegin(GL_QUADS);
-			
+			glColor3f(0.8, 0.8, 0.8); // Make the top a special color	
 			glVertex3f( // v1
 				position.x + railRadius * (norm.x + biNorm.x), 
 				position.y + railRadius * (norm.y + biNorm.y), 
@@ -795,7 +799,7 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 		// Draw the left rectangle
 		glBegin(GL_QUADS);
-
+			glColor3f(1.0, 1.0, 0.0); 
 			glVertex3f( // v3
 				position.x + railRadius * (-norm.x - biNorm.x), 
 				position.y + railRadius * (-norm.y - biNorm.y), 
@@ -825,7 +829,7 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 		// Draw the bottom rectangle
 		glBegin(GL_QUADS);
-			
+			glColor3f(1.0, 1.0, 0.0); 			
 			glVertex3f( // v0
 				position.x + railRadius * (norm.x - biNorm.x), 
 				position.y + railRadius * (norm.y - biNorm.y), 
