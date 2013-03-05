@@ -116,7 +116,7 @@ GLuint splineTrackDisplayList; // This value will hold the display list referenc
 int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-float INCREMENTOR = 0.001; // Will decide how fast the roller coaster should go
+float INCREMENTOR = 0.025; // Will decide how fast the roller coaster should go
 
 // Window Height Values
 int windowX = 640;  
@@ -132,9 +132,13 @@ point norm_current;
 point biNorm_current;
 
 // Store all Norms and BiNorms at control points -- or else bad things happen because of global -- initialize these arrays when the size number of splines/control points is found
-std::vector<point> cpNorms;
-std::vector<point> cpBiNorms;
-std::vector<point> cpTangents;
+// These vectors will hold vectors that correspond to certain (u) values throughout any given spline segment
+std::vector<std::vector<point>> cpNorms;
+std::vector<std::vector<point>> cpBiNorms;
+std::vector<std::vector<point>> cpTangents;
+std::vector<std::vector<point>> cpPositions;
+
+float trackDiameter = 0.05; // The radius of the track.  Used so that the camera can move above it instead of through it.
 
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
@@ -464,16 +468,17 @@ void setCameraPlacement() {
 
 	// Now get the point for the camera placement
 	point camPosition = getCoordinateXYZ(distanceIteratorNum);
+	camPosition.y -= trackDiameter * 7.5; // Up is negative in this coordinate system
 
 	// Then, get where the camera should be pointing to
 	point cameraOriginPosition = tangent_current; // Set the tangent to where the camera should be looking towards
 
 	cameraOriginPosition.x *= 200;
-	cameraOriginPosition.y *= 200;
+	cameraOriginPosition.y *= 200 - trackDiameter * 15;
 	cameraOriginPosition.z *= 200;
 
 	// Finally, set the camera's position
-	/*
+	///*
 	glMatrixMode(GL_PROJECTION);
 
 	// Now begin the actual reshaping
@@ -495,7 +500,7 @@ void setCameraPlacement() {
 		Far  "            ": 1000.0
 	*/
 	// Set the matrix mode back to modelView, so things do not get messed up
-	//glMatrixMode(GL_MODELVIEW);
+	glMatrixMode(GL_MODELVIEW);
 
 	distanceIteratorNum += INCREMENTOR;
 
@@ -574,263 +579,279 @@ void drawAllSplines() {
 }
 
 void drawRailSection(int splineNumber, int controlPointNumber) {
-	float railRadius = 0.1; // How far the unitized vectors will be scaled for attaining the proper sized rail
+	float railRadius = trackDiameter/2; // How far the unitized vectors will be scaled for attaining the proper sized rail
 
-	glLineWidth(2);
+	glLineWidth(50 * trackDiameter);
 
-	// To Test, let's just draw some points to the screen
-	glColor3f(1.0, 0.0, 1.0); 
 
-	point norm = cpNorms[cpNorms.size() - controlPointNumber];
-	point biNorm = cpBiNorms[cpBiNorms.size() - controlPointNumber];
-	point tangent = cpTangents[cpTangents.size() - controlPointNumber];
+	for (int i = 0; i < cpNorms[controlPointNumber - 1].size() - 1; i++) {
 
-	point norm2 = cpNorms[cpNorms.size() - controlPointNumber - 1];
-	point biNorm2 = cpBiNorms[cpBiNorms.size() - controlPointNumber - 1];
-	point tangent2 = cpTangents[cpTangents.size() - controlPointNumber - 1];
+		// To Test, let's just draw some points to the screen
+		glColor3f(1.0, 0.0, 1.0); 
 
-	glBegin(GL_LINES);
+		point norm; //= cpNorms[cpNorms.size() - controlPointNumber];
+		point biNorm; //= cpBiNorms[cpBiNorms.size() - controlPointNumber];
+		point tangent; //= cpTangents[cpTangents.size() - controlPointNumber];
+		point position;
 
-		glVertex3f( // v0
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
-		);
+		point norm2; //= cpNorms[cpNorms.size() - controlPointNumber - 1];
+		point biNorm2; //= cpBiNorms[cpBiNorms.size() - controlPointNumber - 1];
+		point tangent2; //= cpTangents[cpTangents.size() - controlPointNumber - 1];
+		point position2;
 
-		glVertex3f( // v0 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
-		);
+		norm = cpNorms[controlPointNumber - 1][i];
+		biNorm = cpBiNorms[controlPointNumber - 1][i];
+		tangent = cpTangents[controlPointNumber - 1][i];
+		position = cpPositions[controlPointNumber - 1][i];
 
-	glEnd();
+		norm2 = cpNorms[controlPointNumber - 1][i+1];
+		biNorm2 = cpBiNorms[controlPointNumber - 1][i+1];
+		tangent2 = cpTangents[controlPointNumber - 1][i+1];
+		position2 = cpPositions[controlPointNumber - 1][i+1];
 
-	glBegin(GL_LINES);
+		glBegin(GL_LINES);
 
-		glVertex3f( // v1
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
-		);
+			glVertex3f( // v0
+				position.x + railRadius * (norm.x - biNorm.x), 
+				position.y + railRadius * (norm.y - biNorm.y), 
+				position.z + railRadius * (norm.z - biNorm.z)
+			);
 
-		glVertex3f( // v1 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v0 + 1
+				position2.x + railRadius * (norm2.x - biNorm2.x), 
+				position2.y + railRadius * (norm2.y - biNorm2.y), 
+				position2.z + railRadius * (norm2.z - biNorm2.z)
+			);
 
-	glEnd();
+		glEnd();
 
-	glBegin(GL_LINES);
+		glBegin(GL_LINES);
 
-		glVertex3f( // v2
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
-		);
+			glVertex3f( // v1
+				position.x + railRadius * (norm.x + biNorm.x), 
+				position.y + railRadius * (norm.y + biNorm.y), 
+				position.z + railRadius * (norm.z + biNorm.z)
+			);
 
-		glVertex3f( // v2 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v1 + 1
+				position2.x + railRadius * (norm2.x + biNorm2.x), 
+				position2.y + railRadius * (norm2.y + biNorm2.y), 
+				position2.z + railRadius * (norm2.z + biNorm2.z)
+			);
 
-	glEnd();
+		glEnd();
 
-	glBegin(GL_LINES);
+		glBegin(GL_LINES);
 
-		glVertex3f( // v3
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
-		);
+			glVertex3f( // v2
+				position.x + railRadius * (-norm.x + biNorm.x), 
+				position.y + railRadius * (-norm.y + biNorm.y), 
+				position.z + railRadius * (-norm.z + biNorm.z)
+			);
 
-		glVertex3f( // v3 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
-		);
+			glVertex3f( // v2 + 1
+				position2.x + railRadius * (-norm2.x + biNorm2.x), 
+				position2.y + railRadius * (-norm2.y + biNorm2.y), 
+				position2.z + railRadius * (-norm2.z + biNorm2.z)
+			);
 
-	glEnd();
+		glEnd();
 
-	// Draw the six rectangles for the cross section, using the method described in Level 5 on the website
+		glBegin(GL_LINES);
 
-	glColor3f(1.0, 1.0, 0.0); 
+			glVertex3f( // v3
+				position.x + railRadius * (-norm.x - biNorm.x), 
+				position.y + railRadius * (-norm.y - biNorm.y), 
+				position.z + railRadius * (-norm.z - biNorm.z)
+			);
 
-	// Draw the front rectangle
-	glBegin(GL_QUADS);
+			glVertex3f( // v3 + 1
+				position2.x + railRadius * (-norm2.x - biNorm2.x), 
+				position2.y + railRadius * (-norm2.y - biNorm2.y), 
+				position2.z + railRadius * (-norm2.z - biNorm2.z)
+			);
 
-		glVertex3f( // v0
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
-		);
+		glEnd();
 
-		glVertex3f( // v1
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
-		);
+		// Draw the six rectangles for the cross section, using the method described in Level 5 on the website
 
-		glVertex3f( // v2
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
-		);
+		glColor3f(1.0, 1.0, 0.0); 
 
-		glVertex3f( // v3
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
-		);
+		// Draw the front rectangle
+		glBegin(GL_QUADS);
+
+			glVertex3f( // v0
+				position.x + railRadius * (norm.x - biNorm.x), 
+				position.y + railRadius * (norm.y - biNorm.y), 
+				position.z + railRadius * (norm.z - biNorm.z)
+			);
+
+			glVertex3f( // v1
+				position.x + railRadius * (norm.x + biNorm.x), 
+				position.y + railRadius * (norm.y + biNorm.y), 
+				position.z + railRadius * (norm.z + biNorm.z)
+			);
+
+			glVertex3f( // v2
+				position.x + railRadius * (-norm.x + biNorm.x), 
+				position.y + railRadius * (-norm.y + biNorm.y), 
+				position.z + railRadius * (-norm.z + biNorm.z)
+			);
+
+			glVertex3f( // v3
+				position.x + railRadius * (-norm.x - biNorm.x), 
+				position.y + railRadius * (-norm.y - biNorm.y), 
+				position.z + railRadius * (-norm.z - biNorm.z)
+			);
 			
-	glEnd();
+		glEnd();
 
-	// Draw the back rectangle
-	glBegin(GL_QUADS);
+		// Draw the back rectangle
+		glBegin(GL_QUADS);
 
-		glVertex3f( // v0 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
-		);
+			glVertex3f( // v0 + 1
+				position2.x + railRadius * (norm2.x - biNorm2.x), 
+				position2.y + railRadius * (norm2.y - biNorm2.y), 
+				position2.z + railRadius * (norm2.z - biNorm2.z)
+			);
 
-		glVertex3f( // v1 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v1 + 1
+				position2.x + railRadius * (norm2.x + biNorm2.x), 
+				position2.y + railRadius * (norm2.y + biNorm2.y), 
+				position2.z + railRadius * (norm2.z + biNorm2.z)
+			);
 
-		glVertex3f( // v2 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v2 + 1
+				position2.x + railRadius * (-norm2.x + biNorm2.x), 
+				position2.y + railRadius * (-norm2.y + biNorm2.y), 
+				position2.z + railRadius * (-norm2.z + biNorm2.z)
+			);
 
-		glVertex3f( // v3 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
-		);
+			glVertex3f( // v3 + 1
+				position2.x + railRadius * (-norm2.x - biNorm2.x), 
+				position2.y + railRadius * (-norm2.y - biNorm2.y), 
+				position2.z + railRadius * (-norm2.z - biNorm2.z)
+			);
 			
-	glEnd();
+		glEnd();
 
-	// Draw the right rectangle
-	glBegin(GL_QUADS);
+		// Draw the right rectangle
+		glBegin(GL_QUADS);
 		
-		glVertex3f( // v0
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
-		);
+			glVertex3f( // v0
+				position.x + railRadius * (norm.x - biNorm.x), 
+				position.y + railRadius * (norm.y - biNorm.y), 
+				position.z + railRadius * (norm.z - biNorm.z)
+			);
 
-		glVertex3f( // v0 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
-		);
+			glVertex3f( // v0 + 1
+				position2.x + railRadius * (norm2.x - biNorm2.x), 
+				position2.y + railRadius * (norm2.y - biNorm2.y), 
+				position2.z + railRadius * (norm2.z - biNorm2.z)
+			);
 
-		glVertex3f( // v1 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v1 + 1
+				position2.x + railRadius * (norm2.x + biNorm2.x), 
+				position2.y + railRadius * (norm2.y + biNorm2.y), 
+				position2.z + railRadius * (norm2.z + biNorm2.z)
+			);
 
-		glVertex3f( // v1
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
-		);
+			glVertex3f( // v1
+				position.x + railRadius * (norm.x + biNorm.x), 
+				position.y + railRadius * (norm.y + biNorm.y), 
+				position.z + railRadius * (norm.z + biNorm.z)
+			);
 
-	glEnd();
+		glEnd();
 
-	// Draw the top rectangle
-	glBegin(GL_QUADS);
+		// Draw the top rectangle
+		glBegin(GL_QUADS);
 			
-		glVertex3f( // v1
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z + biNorm.z)
-		);
+			glVertex3f( // v1
+				position.x + railRadius * (norm.x + biNorm.x), 
+				position.y + railRadius * (norm.y + biNorm.y), 
+				position.z + railRadius * (norm.z + biNorm.z)
+			);
 
-		glVertex3f( // v1 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v1 + 1
+				position2.x + railRadius * (norm2.x + biNorm2.x), 
+				position2.y + railRadius * (norm2.y + biNorm2.y), 
+				position2.z + railRadius * (norm2.z + biNorm2.z)
+			);
 
-		glVertex3f( // v2 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v2 + 1
+				position2.x + railRadius * (-norm2.x + biNorm2.x), 
+				position2.y + railRadius * (-norm2.y + biNorm2.y), 
+				position2.z + railRadius * (-norm2.z + biNorm2.z)
+			);
 
-		glVertex3f( // v2
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
-		);
+			glVertex3f( // v2
+				position.x + railRadius * (-norm.x + biNorm.x), 
+				position.y + railRadius * (-norm.y + biNorm.y), 
+				position.z + railRadius * (-norm.z + biNorm.z)
+			);
 
-	glEnd();
+		glEnd();
 
-	// Draw the left rectangle
-	glBegin(GL_QUADS);
+		// Draw the left rectangle
+		glBegin(GL_QUADS);
 
-		glVertex3f( // v3
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
-		);
+			glVertex3f( // v3
+				position.x + railRadius * (-norm.x - biNorm.x), 
+				position.y + railRadius * (-norm.y - biNorm.y), 
+				position.z + railRadius * (-norm.z - biNorm.z)
+			);
 
-		glVertex3f( // v3 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
-		);
+			glVertex3f( // v3 + 1
+				position2.x + railRadius * (-norm2.x - biNorm2.x), 
+				position2.y + railRadius * (-norm2.y - biNorm2.y), 
+				position2.z + railRadius * (-norm2.z - biNorm2.z)
+			);
 	
-		glVertex3f( // v2 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x + biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y + biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z + biNorm2.z)
-		);
+			glVertex3f( // v2 + 1
+				position2.x + railRadius * (-norm2.x + biNorm2.x), 
+				position2.y + railRadius * (-norm2.y + biNorm2.y), 
+				position2.z + railRadius * (-norm2.z + biNorm2.z)
+			);
 
-		glVertex3f( // v2
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x + biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y + biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z + biNorm.z)
-		);		
+			glVertex3f( // v2
+				position.x + railRadius * (-norm.x + biNorm.x), 
+				position.y + railRadius * (-norm.y + biNorm.y), 
+				position.z + railRadius * (-norm.z + biNorm.z)
+			);		
 
 			
-	glEnd();
+		glEnd();
 
-	// Draw the bottom rectangle
-	glBegin(GL_QUADS);
+		// Draw the bottom rectangle
+		glBegin(GL_QUADS);
 			
-		glVertex3f( // v0
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (norm.z - biNorm.z)
-		);
+			glVertex3f( // v0
+				position.x + railRadius * (norm.x - biNorm.x), 
+				position.y + railRadius * (norm.y - biNorm.y), 
+				position.z + railRadius * (norm.z - biNorm.z)
+			);
 
-		glVertex3f( // v0 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (norm2.z - biNorm2.z)
-		);
+			glVertex3f( // v0 + 1
+				position2.x + railRadius * (norm2.x - biNorm2.x), 
+				position2.y + railRadius * (norm2.y - biNorm2.y), 
+				position2.z + railRadius * (norm2.z - biNorm2.z)
+			);
 
-		glVertex3f( // v3 + 1
-			g_Splines[splineNumber].points[controlPointNumber + 1].x + railRadius * (-norm2.x - biNorm2.x), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].y + railRadius * (-norm2.y - biNorm2.y), 
-			g_Splines[splineNumber].points[controlPointNumber + 1].z + railRadius * (-norm2.z - biNorm2.z)
-		);
+			glVertex3f( // v3 + 1
+				position2.x + railRadius * (-norm2.x - biNorm2.x), 
+				position2.y + railRadius * (-norm2.y - biNorm2.y), 
+				position2.z + railRadius * (-norm2.z - biNorm2.z)
+			);
 
-		glVertex3f( // v3
-			g_Splines[splineNumber].points[controlPointNumber].x + railRadius * (-norm.x - biNorm.x), 
-			g_Splines[splineNumber].points[controlPointNumber].y + railRadius * (-norm.y - biNorm.y), 
-			g_Splines[splineNumber].points[controlPointNumber].z + railRadius * (-norm.z - biNorm.z)
-		);
+			glVertex3f( // v3
+				position.x + railRadius * (-norm.x - biNorm.x), 
+				position.y + railRadius * (-norm.y - biNorm.y), 
+				position.z + railRadius * (-norm.z - biNorm.z)
+			);
 
-	glEnd();
+		glEnd();
+	}
 }
 
 void getNormals(int splineNumber, int controlPointNumber) {
@@ -839,30 +860,68 @@ void getNormals(int splineNumber, int controlPointNumber) {
 	p1 = g_Splines[splineNumber].points[controlPointNumber  ]; // Pi
 	p2 = g_Splines[splineNumber].points[controlPointNumber+1]; // Pi+1
 	p3 = g_Splines[splineNumber].points[controlPointNumber+2]; // Pi+2
+
+	// Push back new vectors into my lists of vectors for the norms
+	std::vector<point> norms;
+	std::vector<point> binorms;
+	std::vector<point> tangents;
+	std::vector<point> points;
+	cpTangents.push_back(tangents);
+	cpNorms.push_back(norms);
+	cpBiNorms.push_back(binorms);
+	cpPositions.push_back(points);
 	
 	// Calculate the vectors
-	if (splineNumber == 0 && controlPointNumber == 1) { // Then calculate the initial vectors for drawing the cross sections
-		calculateInitialVectors();
-	}
-	else { // Update according to the current control point system
-		// First, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
-		// Get the tangent for the current coordinate
-		tangent_current = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
+	while(distanceIteratorNum < 1) {
+		if (splineNumber == 0 && controlPointNumber == 1) { // Then calculate the initial vectors for drawing the cross sections
+			calculateInitialVectors();
+		}
+		else { // Update according to the current control point system
+			// First, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
+			// Get the tangent for the current coordinate
+			tangent_current = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
 
-		// Next, get the correct Norm/Bi-Norm vectors	
-		// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
-		norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
-		biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
+			// Next, get the correct Norm/Bi-Norm vectors	
+			// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
+			norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
+			biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
+		}		
+
+		// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
+		cpTangents[controlPointNumber-1].push_back(tangent_current);
+		cpNorms[controlPointNumber-1].push_back(norm_current);
+		cpBiNorms[controlPointNumber-1].push_back(biNorm_current);
+		cpPositions[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
+
+		// Set the current norm/biNorm to be the previous ones now
+		norm_prev = norm_current;
+		biNorm_prev = biNorm_current;
+
+		distanceIteratorNum += INCREMENTOR;
 	}
+
+	// Add one last set of values to the end of each vector
+	// Update according to the current control point system
+	// First, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
+	// Get the tangent for the current coordinate
+	tangent_current = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
+	
+	// Next, get the correct Norm/Bi-Norm vectors	
+	// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
+	norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
+	biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
+	
+	// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
+	cpTangents[controlPointNumber-1].push_back(tangent_current);
+	cpNorms[controlPointNumber-1].push_back(norm_current);
+	cpBiNorms[controlPointNumber-1].push_back(biNorm_current);
+	cpPositions[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
 
 	// Set the current norm/biNorm to be the previous ones now
 	norm_prev = norm_current;
 	biNorm_prev = biNorm_current;
 
-	// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
-	cpTangents.push_back(tangent_current);
-	cpNorms.push_back(norm_current);
-	cpBiNorms.push_back(biNorm_current);
+	distanceIteratorNum = 0;
 }
 
 void drawCrossSections() { // Draw the cross sections for the coaster
@@ -877,7 +936,7 @@ void drawCrossSections() { // Draw the cross sections for the coaster
 
 	// Draw them all out here
 	for (int i = 0; i < g_iNumOfSplines; i++) {
-		for (int j = 1; j < g_Splines[i].numControlPoints - 2 - 1; j++) { // Draw the control points, and see if the spline goes through
+		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) { // Draw the control points, and see if the spline goes through
 			drawRailSection(i, j);
 		}
 	}
@@ -1044,7 +1103,7 @@ rotation/translation/scaling */
 	/* Test Code for the spline */
 	glPushMatrix(); // Push on the new transformations that are about to be done
 	
-	///*
+	/*
 	glTranslatef(
 		(translateMultDPI * -g_vLandTranslate[0]), // Inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
 		(translateMultDPI * g_vLandTranslate[1]),
@@ -1173,10 +1232,10 @@ void calculateInitialVectors() {
 	biNorm_current = biNorm_prev;
 
 	// Test to see if the values are prependicular to each other
-	std::cout << (norm_prev.x * tangent_prev.x) + (norm_prev.y * tangent_prev.y) + (norm_prev.z * tangent_prev.z) << std::endl;
-	std::cout << (norm_prev.x *  biNorm_prev.x) + (norm_prev.y *  biNorm_prev.y) + (norm_prev.z *  biNorm_prev.z) << std::endl;
-	std::cout << (biNorm_prev.x * tangent_prev.x) + (biNorm_prev.y * tangent_prev.y) + (biNorm_prev.z * tangent_prev.z) << std::endl;
-	std::cout << (biNorm_prev.x * norm_prev.x * tangent_prev.x) + (biNorm_prev.y * norm_prev.y * tangent_prev.y) + (biNorm_prev.z * norm_prev.z * tangent_prev.z) << std::endl;
+	//std::cout << (norm_prev.x * tangent_prev.x) + (norm_prev.y * tangent_prev.y) + (norm_prev.z * tangent_prev.z) << std::endl;
+	//std::cout << (norm_prev.x *  biNorm_prev.x) + (norm_prev.y *  biNorm_prev.y) + (norm_prev.z *  biNorm_prev.z) << std::endl;
+	//std::cout << (biNorm_prev.x * tangent_prev.x) + (biNorm_prev.y * tangent_prev.y) + (biNorm_prev.z * tangent_prev.z) << std::endl;
+	//std::cout << (biNorm_prev.x * norm_prev.x * tangent_prev.x) + (biNorm_prev.y * norm_prev.y * tangent_prev.y) + (biNorm_prev.z * norm_prev.z * tangent_prev.z) << std::endl;
 }
 
 void compileDisplayList() { // This function will compile the display list before the program starts
