@@ -116,7 +116,7 @@ GLuint splineTrackDisplayList; // This value will hold the display list referenc
 int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-float INCREMENTOR = 0.025; // Will decide how fast the roller coaster should go
+float INCREMENTOR = 0.020; // Will decide how fast the roller coaster should go
 
 // Window Height Values
 int windowX = 640;  
@@ -139,6 +139,9 @@ std::vector<std::vector<point>> cpTangents;
 std::vector<std::vector<point>> cpPositions;
 
 float trackDiameter = 0.05; // The radius of the track.  Used so that the camera can move above it instead of through it.
+
+point camPosition;
+point cameraOriginPosition;
 
 /* Write a screenshot to the specified filename */ 
 void saveScreenshot (char *filename)
@@ -173,6 +176,154 @@ void positionCamera(double eye_x, double eye_y, double eye_z, double center_x, d
 		center_x, center_y, center_z,  // Where the center of the scene is
 		up_x, up_y, up_z   // The "up" vector
 	);
+}
+
+point getUnitVector(point a) {
+	// Get the magnitude
+	float aDist = pow(a.x, 2) + pow(a.y, 2) + pow(a.z, 2);
+	aDist = sqrt(aDist);
+
+	// Normalize the vector
+	a.x /= aDist;
+	a.y /= aDist;
+	a.z /= aDist;
+		
+	return a;
+}
+
+point getCoordinateXYZ(float u) {
+	point p; // Instantiate the point
+
+	// Use a derived version of the C-R matrix formula
+	p.x = ( p0.x * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
+		  ( p1.x * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
+		  ( p2.x * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
+		  ( p3.x * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
+
+	p.y = ( p0.y * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
+		  ( p1.y * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
+		  ( p2.y * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
+		  ( p3.y * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
+
+	p.z = ( p0.z * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
+		  ( p1.z * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
+		  ( p2.z * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
+		  ( p3.z * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
+	
+	return p;
+}
+
+point getTagentXYZ(float u) {
+	point p; // Instantiate the point
+
+	// Use a derived version of the C-R matrix formula
+	p.x = ( p0.x * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
+		  ( p1.x * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
+		  ( p2.x * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
+		  ( p3.x * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
+
+	p.y = ( p0.y * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
+		  ( p1.y * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
+		  ( p2.y * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
+		  ( p3.y * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
+
+	p.z = ( p0.z * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
+		  ( p1.z * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
+		  ( p2.z * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
+		  ( p3.z * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
+	
+	return p;
+}
+
+point getCrossProduct(point a, point b) {
+	point c; // The result of the cross product
+
+	c.x = (a.y * b.z) - (a.z * b.y);
+	c.y = (a.z * b.x) - (a.x * b.z);
+	c.z = (a.x * b.y) - (a.y * b.x);
+
+	return c;
+}
+
+void setCameraPlacement(int val) {
+
+	// Get p0 to p3 to attain the proper point p for the camera placement
+	p0 = g_Splines[currentSplineNum].points[controlPointNum-1]; // Pi-1
+	p1 = g_Splines[currentSplineNum].points[controlPointNum]; // Pi
+	p2 = g_Splines[currentSplineNum].points[controlPointNum+1]; // Pi+1
+	p3 = g_Splines[currentSplineNum].points[controlPointNum+2]; // Pi+2
+
+	if (currentSplineNum == 0 && controlPointNum == 1 && distanceIteratorNum == 0) { // Then set up the initial coordinate system
+		calculateInitialVectors();
+	}
+	else { // Get the next coordinate system based upon the previous one
+		// First, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
+		// Get the tangent for the current coordinate
+		tangent_current = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
+
+		// Next, get the correct Norm/Bi-Norm vectors	
+		// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
+		norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
+		biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
+
+	/*	std::cout << (norm_current.x * tangent_current.x) + (norm_current.y * tangent_current.y) + (norm_current.z * tangent_current.z) << std::endl;
+		std::cout << (norm_current.x *  biNorm_current.x) + (norm_current.y *  biNorm_current.y) + (norm_current.z *  biNorm_current.z) << std::endl;
+		std::cout << (biNorm_current.x * tangent_current.x) + (biNorm_current.y * tangent_current.y) + (biNorm_current.z * tangent_current.z) << std::endl;
+		std::cout << (biNorm_current.x * norm_current.x * tangent_current.x) + (biNorm_current.y * norm_current.y * tangent_current.y) + (biNorm_current.z * norm_current.z * tangent_current.z) << std::endl;*/
+	}
+
+	// Now get the point for the camera placement
+	camPosition = getCoordinateXYZ(distanceIteratorNum);
+	camPosition.y -= trackDiameter * 7.5; // Up is negative in this coordinate system
+
+	// Then, get where the camera should be pointing to
+	cameraOriginPosition = tangent_current; // Set the tangent to where the camera should be looking towards
+
+	cameraOriginPosition.x *= 100;
+	cameraOriginPosition.y *= 100;
+	cameraOriginPosition.z *= 100;
+
+	// Finally, set the camera's position
+
+	positionCamera(
+		camPosition.x         , camPosition.y         , camPosition.z, 
+		cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
+		0.0, 1.0, 0.0
+	); // Sets the camera position
+
+	/*
+		Viewing Angle: 60
+		Aspect Ratio: 1.333 (4:3)
+		Near Clipping Plane: 0.01
+		Far  "            ": 1000.0
+	*/
+	// Set the matrix mode back to modelView, so things do not get messed up
+
+
+	distanceIteratorNum += INCREMENTOR;
+
+	// Set the current norm/biNorm to be the previous ones now
+	norm_prev = norm_current;
+	biNorm_prev = biNorm_current;
+
+	//std::cout << distanceIteratorNum << std::endl;
+	//std::cout << camPosition.x << std::endl;
+	//std::cout << camPosition.y << std::endl;
+	//std::cout << camPosition.z << std::endl;
+	//std::cout << controlPointNum << std::endl;
+
+	if (distanceIteratorNum >= 1) { // Reset u and increment the control point num ++
+		distanceIteratorNum = 0;
+		controlPointNum++;
+		if (controlPointNum == g_Splines[currentSplineNum].numControlPoints - 2) { // If we have reached the end of the spline, reset the control point value and increment the spline currently being traversed
+			controlPointNum = 1;
+			currentSplineNum++;
+			if (currentSplineNum == g_iNumOfSplines) { // Reset currentSplineNum value back to 0 if we have passed the last spline
+				currentSplineNum = 0;
+			}
+			calculateInitialVectors();
+		}
+	}
 }
 
 void myinit() {	/* setup gl view here */
@@ -369,163 +520,6 @@ void drawLine(point v0, point v1) {
 	// Draw the second point
 	glColor3f(1.0, 1.0, 1.0);
 	glVertex3f(v1.x, v1.y, v1.z);
-}
-
-
-point getCoordinateXYZ(float u) {
-	point p; // Instantiate the point
-
-	// Use a derived version of the C-R matrix formula
-	p.x = ( p0.x * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
-		  ( p1.x * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
-		  ( p2.x * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
-		  ( p3.x * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
-
-	p.y = ( p0.y * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
-		  ( p1.y * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
-		  ( p2.y * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
-		  ( p3.y * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
-
-	p.z = ( p0.z * ( -(pow(u, 3) * s)       + (2 * pow(u, 2) * s)         - (u * s) )  ) + 
-		  ( p1.z * (  (pow(u, 3) * (2 - s)) + (pow(u, 2) * ((s - 3)))     + (  1  ) )  ) + 
-		  ( p2.z * (  (pow(u, 3) * (s - 2)) + (pow(u, 2) * (3 - (2 * s))) + (u * s) )  ) + 
-		  ( p3.z * (  (pow(u, 3) * s)       - (pow(u, 2) * s) )  );
-	
-	return p;
-}
-
-point getTagentXYZ(float u) {
-	point p; // Instantiate the point
-
-	// Use a derived version of the C-R matrix formula
-	p.x = ( p0.x * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
-		  ( p1.x * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
-		  ( p2.x * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
-		  ( p3.x * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
-
-	p.y = ( p0.y * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
-		  ( p1.y * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
-		  ( p2.y * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
-		  ( p3.y * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
-
-	p.z = ( p0.z * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
-		  ( p1.z * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
-		  ( p2.z * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
-		  ( p3.z * (  (3 * pow(u, 2) * s)       - (2 * u * s) )  );
-	
-	return p;
-}
-
-point getCrossProduct(point a, point b) {
-	point c; // The result of the cross product
-
-	c.x = (a.y * b.z) - (a.z * b.y);
-	c.y = (a.z * b.x) - (a.x * b.z);
-	c.z = (a.x * b.y) - (a.y * b.x);
-
-	return c;
-}
-
-point getUnitVector(point a) {
-	// Get the magnitude
-	float aDist = pow(a.x, 2) + pow(a.y, 2) + pow(a.z, 2);
-	aDist = sqrt(aDist);
-
-	// Normalize the vector
-	a.x /= aDist;
-	a.y /= aDist;
-	a.z /= aDist;
-		
-	return a;
-}
-
-void setCameraPlacement() {
-
-	// Get p0 to p3 to attain the proper point p for the camera placement
-	p0 = g_Splines[currentSplineNum].points[controlPointNum-1]; // Pi-1
-	p1 = g_Splines[currentSplineNum].points[controlPointNum]; // Pi
-	p2 = g_Splines[currentSplineNum].points[controlPointNum+1]; // Pi+1
-	p3 = g_Splines[currentSplineNum].points[controlPointNum+2]; // Pi+2
-
-	if (currentSplineNum == 0 && controlPointNum == 1 && distanceIteratorNum == 0) { // Then set up the initial coordinate system
-		calculateInitialVectors();
-	}
-	else { // Get the next coordinate system based upon the previous one
-		// First, get the point that the camera should be looking at (it will be on the spline segment ahead of the one currently being traversed)
-		// Get the tangent for the current coordinate
-		tangent_current = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Will be the point that the  camera points to as it is traveling along the roller coaster
-
-		// Next, get the correct Norm/Bi-Norm vectors	
-		// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
-		norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
-		biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
-
-		std::cout << (norm_current.x * tangent_current.x) + (norm_current.y * tangent_current.y) + (norm_current.z * tangent_current.z) << std::endl;
-		std::cout << (norm_current.x *  biNorm_current.x) + (norm_current.y *  biNorm_current.y) + (norm_current.z *  biNorm_current.z) << std::endl;
-		std::cout << (biNorm_current.x * tangent_current.x) + (biNorm_current.y * tangent_current.y) + (biNorm_current.z * tangent_current.z) << std::endl;
-		std::cout << (biNorm_current.x * norm_current.x * tangent_current.x) + (biNorm_current.y * norm_current.y * tangent_current.y) + (biNorm_current.z * norm_current.z * tangent_current.z) << std::endl;
-	}
-
-	// Now get the point for the camera placement
-	point camPosition = getCoordinateXYZ(distanceIteratorNum);
-	camPosition.y -= trackDiameter * 7.5; // Up is negative in this coordinate system
-
-	// Then, get where the camera should be pointing to
-	point cameraOriginPosition = tangent_current; // Set the tangent to where the camera should be looking towards
-
-	cameraOriginPosition.x *= 200;
-	cameraOriginPosition.y *= 200 - trackDiameter * 15;
-	cameraOriginPosition.z *= 200;
-
-	// Finally, set the camera's position
-	///*
-	glMatrixMode(GL_PROJECTION);
-
-	// Now begin the actual reshaping
-	glLoadIdentity(); // Reset the matrix
-
-	// Set up the perspective projection matrix
-	gluPerspective(60.0, (double)windowX/windowY, 0.01, 1000.0);
-	
-	positionCamera(
-		camPosition.x         , camPosition.y         , camPosition.z, 
-		cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
-		biNorm_current.x, biNorm_current.y, biNorm_current.z//0.0, 1.0, 0.0
-	); // Sets the camera position
-
-	/*
-		Viewing Angle: 60
-		Aspect Ratio: 1.333 (4:3)
-		Near Clipping Plane: 0.01
-		Far  "            ": 1000.0
-	*/
-	// Set the matrix mode back to modelView, so things do not get messed up
-	glMatrixMode(GL_MODELVIEW);
-
-	distanceIteratorNum += INCREMENTOR;
-
-	// Set the current norm/biNorm to be the previous ones now
-	norm_prev = norm_current;
-	biNorm_prev = biNorm_current;
-
-	//std::cout << distanceIteratorNum << std::endl;
-	//std::cout << camPosition.x << std::endl;
-	//std::cout << camPosition.y << std::endl;
-	//std::cout << camPosition.z << std::endl;
-	//std::cout << controlPointNum << std::endl;
-
-	if (distanceIteratorNum >= 1) { // Reset u and increment the control point num ++
-		distanceIteratorNum = 0;
-		controlPointNum++;
-		if (controlPointNum == g_Splines[currentSplineNum].numControlPoints - 2) { // If we have reached the end of the spline, reset the control point value and increment the spline currently being traversed
-			controlPointNum = 1;
-			currentSplineNum++;
-			if (currentSplineNum == g_iNumOfSplines) { // Reset currentSplineNum value back to 0 if we have passed the last spline
-				currentSplineNum = 0;
-			}
-			calculateInitialVectors();
-		}
-	}
 }
 
 /*
@@ -829,7 +823,7 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 
 		// Draw the bottom rectangle
 		glBegin(GL_QUADS);
-			glColor3f(1.0, 1.0, 0.0); 			
+			glColor3f(0.8, 0.8, 0.8); // Make the top a special color				
 			glVertex3f( // v0
 				position.x + railRadius * (norm.x - biNorm.x), 
 				position.y + railRadius * (norm.y - biNorm.y), 
@@ -1083,6 +1077,8 @@ char* createFileName() {
 
 void idle() {
   /* do some stuff... */
+	glutTimerFunc(500, setCameraPlacement, 1);
+
 	if (saveScreenShotOn == true) {
 		saveScreenshot(createFileName());
 		frameNum++;
@@ -1099,24 +1095,35 @@ void display() {
 rotation/translation/scaling */
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Obviously, clear these values, or KABOOM!!!
+	glLoadIdentity(); // Reset the Matrix
 
 	glMatrixMode(GL_MODELVIEW); // Set mode to ModelView Here, just to be sure...
 
-	glLoadIdentity(); // Reset the Matrix
+		positionCamera(
+		-camPosition.x         , -camPosition.y         , -camPosition.z, 
+		-cameraOriginPosition.x, -cameraOriginPosition.y, -cameraOriginPosition.z, 
+		0.0, 1.0, 0.0
+	); // Sets the camera position
+	
+
+	glRotatef(biNorm_current.x, 1, 0, 0);
+	glRotatef(biNorm_current.y, 0, 1, 0);
+	glRotatef(biNorm_current.z, 0, 0, 1);
+	glTranslatef(-camPosition.x*2, -camPosition.y*2, -camPosition.z*2);
 
 	/* Test Code for the spline */
-	glPushMatrix(); // Push on the new transformations that are about to be done
+	//glPushMatrix(); // Push on the new transformations that are about to be done
 	
-	/*
-	glTranslatef(
-		(translateMultDPI * -g_vLandTranslate[0]), // Inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
-		(translateMultDPI * g_vLandTranslate[1]),
-		(translateMultDPI * -g_vLandTranslate[2])
-	); // Translate the matrix
+	////*
+	//glTranslatef(
+	//	(translateMultDPI * -g_vLandTranslate[0]), // Inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
+	//	(translateMultDPI * g_vLandTranslate[1]),
+	//	(translateMultDPI * -g_vLandTranslate[2])
+	//); // Translate the matrix
 
-	glRotatef(-g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
-	glRotatef(-g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
-	glRotatef(g_vLandRotate[2], 0, 0, 1); // Rotate along the z-axis
+	//glRotatef(-g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	//glRotatef(-g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
+	//glRotatef(g_vLandRotate[2], 0, 0, 1); // Rotate along the z-axis
 
 	glScalef(
 		(scaleMultDPI * g_vLandScale[0]),
@@ -1128,9 +1135,9 @@ rotation/translation/scaling */
 	// Call the display List
 	glCallList(splineTrackDisplayList);
 
-	setCameraPlacement();
+//	setCameraPlacement();
 
-	glPopMatrix(); // Remove the transformation matrix
+	//glPopMatrix(); // Remove the transformation matrix
 
 	glutSwapBuffers();
 }
