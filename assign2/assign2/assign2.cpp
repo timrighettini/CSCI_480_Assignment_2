@@ -126,7 +126,7 @@ GLuint splineTrackDisplayList; // This value will hold the display list referenc
 int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-float INCREMENTOR = 0.020; // Will decide how fast the roller coaster should go
+float INCREMENTOR = 0.0175; // Will decide how fast the roller coaster should go
 
 // Window Height Values
 int windowX = 640;  
