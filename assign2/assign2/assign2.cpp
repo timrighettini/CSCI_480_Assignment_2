@@ -276,7 +276,7 @@ void setCameraPlacement() {
 	p2 = g_Splines[currentSplineNum].points[controlPointNum+1]; // Pi+1
 	p3 = g_Splines[currentSplineNum].points[controlPointNum+2]; // Pi+2
 
-	if (currentSplineNum == 0 && controlPointNum == 1 && distanceIteratorNum == 0) { // Then set up the initial coordinate system
+	if (currentSplineNum == 0 && controlPointNum == 1 && distanceIteratorNum == 0.000) { // Then set up the initial coordinate system
 		calculateInitialVectors();
 	}
 	else { // Get the next coordinate system based upon the previous one
@@ -336,7 +336,7 @@ void setCameraPlacement() {
 	//std::cout << controlPointNum << std::endl;
 
 	if (distanceIteratorNum >= 1) { // Reset u and increment the control point num ++
-		distanceIteratorNum = 0;
+		distanceIteratorNum = 0.000;
 		controlPointNum++;
 		if (controlPointNum == g_Splines[currentSplineNum].numControlPoints - 2) { // If we have reached the end of the spline, reset the control point value and increment the spline currently being traversed
 			controlPointNum = 1;
@@ -917,7 +917,7 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 	
 	// Calculate the vectors
 	while(distanceIteratorNum < 1) {
-		if (splineNumber == 0 && controlPointNumber == 1) { // Then calculate the initial vectors for drawing the cross sections
+		if (splineNumber == 0 && controlPointNumber == 1 && distanceIteratorNum == 0.000) { // Then calculate the initial vectors for drawing the cross sections
 			calculateInitialVectors();
 		}
 		else { // Update according to the current control point system
@@ -1009,7 +1009,7 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 	norm_prev = norm_current;
 	biNorm_prev = biNorm_current;
 
-	distanceIteratorNum = 0;
+	distanceIteratorNum = 0.000;
 }
 
 void drawCrossSections() { // Draw the cross sections for the coaster
@@ -1542,9 +1542,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	// Will be used for traveling through a spline, iteratively, and non realistically
 	controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 	currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
-	distanceIteratorNum = 0; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
+	distanceIteratorNum = 0.000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
 
-	setCameraPlacement(); // Calculate here just to check how the vectors come out, and compile the display list accordingly
+	//setCameraPlacement(); // Calculate here just to check how the vectors come out, and compile the display list accordingly
+
+	//distanceIteratorNum = 0; // Reset this value to zero
 
 	compileDisplayList(); // Compile the display list
 
