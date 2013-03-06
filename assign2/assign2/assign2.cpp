@@ -97,6 +97,7 @@ Pic* skyTexture; // Will hold the image to be used for the sky plane texture
 /*For animations*/
 Pic* groundAnimationFrames[121]; // Will hold all of the frames for the ground animation
 Pic* skyAnimationFrames[241]; // Will hold all of the frames for the sky animation
+bool animationOn = true; // Will determine if animation will be on or not for the simulation (decreases loading time if off, but not nearly as cool)
 
 // Animation counters
 int skyFrameCounter = 0; // What frame is currently being displayed for the sky animation
@@ -117,7 +118,7 @@ float maxDist = 0; // This value will hold how far the furthest spline point is 
 float lowestPoint = 0; // The lowest value of any spline coordinate, in terms of y
 
 float FLOOR_SUB = 0; // How far the ground plane will be from the floor relative to the lowest point of the splines
-float MAX_DIST_MULT = 3.75; // How far the skybox will extend out from the farthest point in the spline(s)
+float MAX_DIST_MULT = 4.75; // How far the skybox will extend out from the farthest point in the spline(s)
 
 // These values will hold the display list for everything to be drawn
 GLuint splineTrackDisplayList; // This value will hold the display list reference
@@ -156,7 +157,9 @@ std::vector<std::vector<point>> cpBiNormsRight;
 std::vector<std::vector<point>> cpTangentsRight;
 std::vector<std::vector<point>> cpPositionsRight;
 
-float trackDiameter = 0.05; // The radius of the track.  Used so that the camera can move above it instead of through it.
+bool drawDouble = true; // Will draw two pairs of rails assuming the 
+
+float trackDiameter = 0.025; // The radius of the track.  Used so that the camera can move above it instead of through it.
 
 point camPosition;
 point cameraOriginPosition;
@@ -600,9 +603,8 @@ void drawAllSplines() {
 void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft) {
 	float railRadius = trackDiameter/2; // How far the unitized vectors will be scaled for attaining the proper sized rail
 
-	glLineWidth(50 * trackDiameter);
-
-
+	glLineWidth(100 * trackDiameter);
+	
 	for (int i = 0; i < cpNormsLeft[controlPointNumber - 1].size() - 1; i++) {
 
 		// To Test, let's just draw some points to the screen
@@ -708,7 +710,7 @@ void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft)
 		// Draw the six rectangles for the cross section, using the method described in Level 5 on the website
 
 		// Draw the front rectangle
-		if (i == 0) { // If this is the first norm section, draw the front quad
+		if (i == 0 && splineNumber == 1) { // If this is the first norm section, draw the front quad
 			glColor3f(1.0, 1.0, 0.0); 
 			glBegin(GL_QUADS);
 
@@ -937,12 +939,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 			cpNormsLeft[controlPointNumber-1].push_back(norm_current);
 			cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
 			cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset;
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);
 			if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset;	
+				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);	
 			}
 			else { // Draw the track along the z instead of the y axis so it does not get in the way
-				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset;
+				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
 			}						
 		}
 
@@ -951,12 +953,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 			cpNormsRight[controlPointNumber-1].push_back(norm_current);
 			cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
 			cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;						
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);						
 			if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset;
+				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);
 			}
 			else { // Draw the track along the z instead of the y axis so it does not get in the way
-				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset;
+				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
 			}
 		}
 
@@ -983,12 +985,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 		cpNormsLeft[controlPointNumber-1].push_back(norm_current);
 		cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
 		cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-		cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset;
+		cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);
 		if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset;	
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);	
 		}
 		else { // Draw the track along the z instead of the y axis so it does not get in the way
-			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset;
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
 		}	
 	}
 	else {
@@ -996,12 +998,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 		cpNormsRight[controlPointNumber-1].push_back(norm_current);
 		cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
 		cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-		cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;						
+		cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);						
 		if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset;
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);
 		}
 		else { // Draw the track along the z instead of the y axis so it does not get in the way
-			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset;
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
 		}
 	}
 
@@ -1067,7 +1069,11 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	float halfGroundPlaneSize = groundPlaneSize/2; // Saves on FP divisions
 
 	// Load in the ground texture
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundAnimationFrames[groundFrameCounter]->nx,  groundAnimationFrames[groundFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  groundAnimationFrames[groundFrameCounter]->pix);
+	// Swap Animation Frames
+	if (animationOn == true)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundAnimationFrames[groundFrameCounter]->nx,  groundAnimationFrames[groundFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  groundAnimationFrames[groundFrameCounter]->pix);
+	else 
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx,  groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
 	if (animationSwitch == 1) {
 		groundFrameCounter++;
 	}
@@ -1084,7 +1090,12 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	glEnd();
 
 	// Load in the sky texture
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyAnimationFrames[skyFrameCounter]->nx,  skyAnimationFrames[skyFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  skyAnimationFrames[skyFrameCounter]->pix);
+	// Swap Animation Frames
+	if (animationOn == true)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyAnimationFrames[skyFrameCounter]->nx,  skyAnimationFrames[skyFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  skyAnimationFrames[skyFrameCounter]->pix);
+	else 
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyTexture->nx,  skyTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, skyTexture->pix); 
+
 	if (animationSwitch == 1) {
 		skyFrameCounter++;
 		animationSwitch = 0;
@@ -1121,7 +1132,12 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, (halfGroundPlaneSize));
 	glEnd();
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyAnimationFrames[240-skyFrameCounter]->nx,  skyAnimationFrames[240-skyFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  skyAnimationFrames[240-skyFrameCounter]->pix);	
+	// Swap Animation Frames
+	if (animationOn == true)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyAnimationFrames[240-skyFrameCounter]->nx,  skyAnimationFrames[240-skyFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  skyAnimationFrames[240-skyFrameCounter]->pix);	
+	else 
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyTexture->nx,  skyTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, skyTexture->pix); 
+
 	// Draw the sky plane: yz axis with -x/2 width from center
 	glBegin(GL_QUADS);
 		glTexCoord2f(0.0, 0.0); glVertex3f(-(halfGroundPlaneSize), (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
@@ -1443,6 +1459,8 @@ void loadAnimations() {
 			std::cerr << "Image not loaded for Ground Plane, exiting" << std::endl;
 			exit(1);
 		}
+		if (!animationOn)
+			break; // Only load in the first frame
 	}
 
 	std::cout << "Loading Sky animations..." << std::endl;
@@ -1479,10 +1497,12 @@ void loadAnimations() {
 			std::cerr << "Image not loaded for Sky Plane, exiting" << std::endl;
 			exit(1);
 		}
+		if (!animationOn)
+			break; // Only load in the first frame
 	}
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])
 {
 	// I've set the argv[1] to track.txt.
 	// To change it, on the "Solution Explorer",
@@ -1496,6 +1516,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	loadSplines(argv[1]);
+
+	if (argc > 2) { // Load in the animation agrument
+		if (argv[2][0] == 'f' || argv[2][0] == 'F') { // Turns OFF the animation
+			animationOn = false;
+		}
+		else { // Leave the animation ON
+			animationOn = true; 
+		}
+	}
 
 	// Do all of the OpenGL initialization stuff
 	glutInit(&argc,argv);
@@ -1543,10 +1572,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 	currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 	distanceIteratorNum = 0.000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-
-	//setCameraPlacement(); // Calculate here just to check how the vectors come out, and compile the display list accordingly
-
-	//distanceIteratorNum = 0; // Reset this value to zero
 
 	compileDisplayList(); // Compile the display list
 
