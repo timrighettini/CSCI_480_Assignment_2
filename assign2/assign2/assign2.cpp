@@ -23,6 +23,7 @@
 #include <vector>
 
 void calculateInitialVectors(); // Prototype for this function
+void loadAnimations();
 
 /* represents one control point along the spline */
 struct point {
@@ -93,6 +94,15 @@ GLuint groundTextureID; // This value will hold the texture ID for the ground pl
 
 Pic* skyTexture; // Will hold the image to be used for the sky plane texture 
 
+/*For animations*/
+Pic* groundAnimationFrames[121]; // Will hold all of the frames for the ground animation
+Pic* skyAnimationFrames[241]; // Will hold all of the frames for the sky animation
+
+// Animation counters
+int skyFrameCounter = 0; // What frame is currently being displayed for the sky animation
+int groundFrameCounter = 0; // What frame is currently being displayed for the ground animation
+int animationSwitch = 0; // When this value = a certain number, the animations will advance to the next frame
+
 // These values will hold the what the base left/right/top/bottom values a texture plane will be
 float rectangleRight = 0.5;
 float rectangleLeft = -0.5;
@@ -116,7 +126,7 @@ GLuint splineTrackDisplayList; // This value will hold the display list referenc
 int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-float INCREMENTOR = 0.025; // Will decide how fast the roller coaster should go
+float INCREMENTOR = 0.020; // Will decide how fast the roller coaster should go
 
 // Window Height Values
 int windowX = 640;  
@@ -390,6 +400,8 @@ void myinitTexture() {
 
 	// To test for now, load in the ground plane image to use for a texture
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
+
+	loadAnimations(); // Load in all of the animation frames from the Images directory
 }
 
 void calculateLowFarPointsSplines() {
@@ -1024,7 +1036,13 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	float halfGroundPlaneSize = groundPlaneSize/2; // Saves on FP divisions
 
 	// Load in the ground texture
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundAnimationFrames[groundFrameCounter]->nx,  groundAnimationFrames[groundFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  groundAnimationFrames[groundFrameCounter]->pix);
+	if (animationSwitch == 1) {
+		groundFrameCounter++;
+	}
+	if (groundFrameCounter > 120) {
+		groundFrameCounter = 0;
+	}
 
 	// Draw the ground plane first: xz plane with the lower bound of the sky: xz axis with -y/2 height from center
 	glBegin(GL_QUADS);
@@ -1035,7 +1053,17 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	glEnd();
 
 	// Load in the sky texture
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx, groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, skyTexture->pix);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyAnimationFrames[skyFrameCounter]->nx,  skyAnimationFrames[skyFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  skyAnimationFrames[skyFrameCounter]->pix);
+	if (animationSwitch == 1) {
+		skyFrameCounter++;
+		animationSwitch = 0;
+	}
+	else {
+		animationSwitch++;
+	}
+	if (skyFrameCounter > 240) {
+		skyFrameCounter = 0;
+	}
 
 	// Draw the sky plane: xy axis with y/2 height from center
 	glBegin(GL_QUADS);
@@ -1045,6 +1073,7 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, groundPlaneSize + groundOffset, rectangleDown * groundPlaneSize);
 	glEnd();
 
+	
 	// Draw the sky plane: xy axis with -z/2 height from center
 	glBegin(GL_QUADS);
 		glTexCoord2f(0.0, 0.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, -(halfGroundPlaneSize));
@@ -1061,6 +1090,7 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 		glTexCoord2f(0.0, 1.0); glVertex3f(rectangleLeft  * groundPlaneSize, (rectangleUp   * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, (halfGroundPlaneSize));
 	glEnd();
 
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyAnimationFrames[240-skyFrameCounter]->nx,  skyAnimationFrames[240-skyFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  skyAnimationFrames[240-skyFrameCounter]->pix);	
 	// Draw the sky plane: yz axis with -x/2 width from center
 	glBegin(GL_QUADS);
 		glTexCoord2f(0.0, 0.0); glVertex3f(-(halfGroundPlaneSize), (rectangleDown * groundPlaneSize) + (halfGroundPlaneSize) + groundOffset, rectangleLeft  * groundPlaneSize);
@@ -1136,7 +1166,7 @@ char* createFileName() {
 
 void idle() {
   /* do some stuff... */
-	glutTimerFunc(500, setCameraPlacement, 1);
+	glutTimerFunc(500, setCameraPlacement, 1);	
 
 	if (saveScreenShotOn == true) {
 		saveScreenshot(createFileName());
@@ -1173,7 +1203,7 @@ rotation/translation/scaling */
 	/* Test Code for the spline */
 	glPopMatrix(); // push on the new transformations that are about to be done
 	
-	//*
+	/*
 	glTranslatef(
 		(translateMultDPI * -g_vLandTranslate[0]), // inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
 		(translateMultDPI * g_vLandTranslate[1]),
@@ -1190,6 +1220,9 @@ rotation/translation/scaling */
 		(scaleMultDPI * g_vLandScale[2])
 	); // Scale the Matrix
 	//*/
+
+	// Draw the textured skybox -- I cannot put this in the displayList because of the animation
+	drawSkyBox(maxDist * MAX_DIST_MULT, lowestPoint + FLOOR_SUB);
 
 	// Call the display List
 	glCallList(splineTrackDisplayList);
@@ -1313,8 +1346,6 @@ void compileDisplayList() { // This function will compile the display list befor
 	
 	glNewList(splineTrackDisplayList, GL_COMPILE);
 		
-		// Draw the textured skybox
-		drawSkyBox(maxDist * MAX_DIST_MULT, lowestPoint + FLOOR_SUB);
 		// The first argument controls HOW BIG the skybox actually is
 		// The second argument, assuming that the skybox's center is at 0, 0, shifts the skybox up or down by x amount
 
@@ -1327,9 +1358,76 @@ void compileDisplayList() { // This function will compile the display list befor
 		// Draw out the splines
 		drawAllSplines();
 
-
-
 	glEndList();
+}
+
+void loadAnimations() {
+	std::cout << "Loading Ground animations..." << std::endl;
+	for (int i = 0; i < 121; i++) { // There are 121 frames to load in for this animation
+
+		std::string name = "Images/Earth_Stars/Earth_Stars_1024";
+		/*Append the appropriate number of 0's in front of the string*/
+
+		// Load in the first set of animation frames -- for the ground plane
+		if (i < 10) {
+			name.append("00");		
+		}
+		else if (i < 100) {
+			name.append("0");
+		}
+
+		std::stringstream s; // Use this to convert the number into a string
+		s << i; // Get the number in string format
+		name.append(s.str()); // Put that formatted number into a string	
+		name.append(".jpg"); // Need the image file type
+
+		//std::cout << name << std::endl;
+
+		char * newName = new char[name.length() +1]; // Will be used to hold char* version of string
+		strcpy(newName, name.c_str()); // Copy it in 
+
+		// Load in the image
+		groundAnimationFrames[i] = jpeg_read(newName, NULL);
+
+		if (!groundAnimationFrames[i]) {
+			std::cerr << "Image not loaded for Ground Plane, exiting" << std::endl;
+			exit(1);
+		}
+	}
+
+	std::cout << "Loading Sky animations..." << std::endl;
+	// Load in the Sky Plane animation
+	for (int i = 0; i < 241; i++) { // There are 121 frames to load in for this animation
+
+		std::string name = "Images/Stars_Sky/Stars_Move_1024";
+		/*Append the appropriate number of 0's in front of the string*/
+
+		// Load in the first set of animation frames -- for the ground plane
+		if (i < 10) {
+			name.append("00");		
+		}
+		else if (i < 100) {
+			name.append("0");
+		}
+
+		std::stringstream s; // Use this to convert the number into a string
+		s << i; // Get the number in string format
+		name.append(s.str()); // Put that formatted number into a string	
+		name.append(".jpg"); // Need the image file type
+
+		//std::cout << name << std::endl;
+
+		char * newName = new char[name.length() +1]; // Will be used to hold char* version of string
+		strcpy(newName, name.c_str()); // Copy it in 
+
+		// Load in the image
+		skyAnimationFrames[i] = jpeg_read(newName, NULL);
+
+		if (!skyAnimationFrames[i]) {
+			std::cerr << "Image not loaded for Sky Plane, exiting" << std::endl;
+			exit(1);
+		}
+	}
 }
 
 int _tmain(int argc, _TCHAR* argv[])
