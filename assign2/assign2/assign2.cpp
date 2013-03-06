@@ -116,7 +116,7 @@ GLuint splineTrackDisplayList; // This value will hold the display list referenc
 int controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 int currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-float INCREMENTOR = 0.020; // Will decide how fast the roller coaster should go
+float INCREMENTOR = 0.025; // Will decide how fast the roller coaster should go
 
 // Window Height Values
 int windowX = 640;  
@@ -133,10 +133,15 @@ point biNorm_current;
 
 // Store all Norms and BiNorms at control points -- or else bad things happen because of global -- initialize these arrays when the size number of splines/control points is found
 // These vectors will hold vectors that correspond to certain (u) values throughout any given spline segment
-std::vector<std::vector<point>> cpNorms;
-std::vector<std::vector<point>> cpBiNorms;
-std::vector<std::vector<point>> cpTangents;
-std::vector<std::vector<point>> cpPositions;
+std::vector<std::vector<point>> cpNormsLeft;
+std::vector<std::vector<point>> cpBiNormsLeft;
+std::vector<std::vector<point>> cpTangentsLeft;
+std::vector<std::vector<point>> cpPositionsLeft;
+
+std::vector<std::vector<point>> cpNormsRight;
+std::vector<std::vector<point>> cpBiNormsRight;
+std::vector<std::vector<point>> cpTangentsRight;
+std::vector<std::vector<point>> cpPositionsRight;
 
 float trackDiameter = 0.05; // The radius of the track.  Used so that the camera can move above it instead of through it.
 
@@ -274,7 +279,7 @@ void setCameraPlacement(int val) {
 
 	// Now get the point for the camera placement
 	camPosition = getCoordinateXYZ(distanceIteratorNum);
-	camPosition.y -= trackDiameter * 7.5; // Up is negative in this coordinate system
+	//camPosition.y -= trackDiameter * 7.5; // Up is negative in this coordinate system
 
 	// Then, get where the camera should be pointing to
 	cameraOriginPosition = tangent_current; // Set the tangent to where the camera should be looking towards
@@ -572,36 +577,49 @@ void drawAllSplines() {
 	}
 }
 
-void drawRailSection(int splineNumber, int controlPointNumber) {
+void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft) {
 	float railRadius = trackDiameter/2; // How far the unitized vectors will be scaled for attaining the proper sized rail
 
 	glLineWidth(50 * trackDiameter);
 
 
-	for (int i = 0; i < cpNorms[controlPointNumber - 1].size() - 1; i++) {
+	for (int i = 0; i < cpNormsLeft[controlPointNumber - 1].size() - 1; i++) {
 
 		// To Test, let's just draw some points to the screen
 		glColor3f(1.0, 0.0, 1.0); // Color for the lines
 
-		point norm; //= cpNorms[cpNorms.size() - controlPointNumber];
-		point biNorm; //= cpBiNorms[cpBiNorms.size() - controlPointNumber];
-		point tangent; //= cpTangents[cpTangents.size() - controlPointNumber];
+		point norm; //= cpNormsLeft[cpNormsLeft.size() - controlPointNumber];
+		point biNorm; //= cpBiNormsLeft[cpBiNormsLeft.size() - controlPointNumber];
+		point tangent; //= cpTangentsLeft[cpTangentsLeft.size() - controlPointNumber];
 		point position;
 
-		point norm2; //= cpNorms[cpNorms.size() - controlPointNumber - 1];
-		point biNorm2; //= cpBiNorms[cpBiNorms.size() - controlPointNumber - 1];
-		point tangent2; //= cpTangents[cpTangents.size() - controlPointNumber - 1];
+		point norm2; //= cpNormsLeft[cpNormsLeft.size() - controlPointNumber - 1];
+		point biNorm2; //= cpBiNormsLeft[cpBiNormsLeft.size() - controlPointNumber - 1];
+		point tangent2; //= cpTangentsLeft[cpTangentsLeft.size() - controlPointNumber - 1];
 		point position2;
 
-		norm = cpNorms[controlPointNumber - 1][i];
-		biNorm = cpBiNorms[controlPointNumber - 1][i];
-		tangent = cpTangents[controlPointNumber - 1][i];
-		position = cpPositions[controlPointNumber - 1][i];
+		if (drawingLeft == true) {
+			norm = cpNormsLeft[controlPointNumber - 1][i];
+			biNorm = cpBiNormsLeft[controlPointNumber - 1][i];
+			tangent = cpTangentsLeft[controlPointNumber - 1][i];
+			position = cpPositionsLeft[controlPointNumber - 1][i];
 
-		norm2 = cpNorms[controlPointNumber - 1][i+1];
-		biNorm2 = cpBiNorms[controlPointNumber - 1][i+1];
-		tangent2 = cpTangents[controlPointNumber - 1][i+1];
-		position2 = cpPositions[controlPointNumber - 1][i+1];
+			norm2 = cpNormsLeft[controlPointNumber - 1][i+1];
+			biNorm2 = cpBiNormsLeft[controlPointNumber - 1][i+1];
+			tangent2 = cpTangentsLeft[controlPointNumber - 1][i+1];
+			position2 = cpPositionsLeft[controlPointNumber - 1][i+1];
+		}
+		else {
+			norm = cpNormsRight[controlPointNumber - 1][i];
+			biNorm = cpBiNormsRight[controlPointNumber - 1][i];
+			tangent = cpTangentsRight[controlPointNumber - 1][i];
+			position = cpPositionsRight[controlPointNumber - 1][i];
+
+			norm2 = cpNormsRight[controlPointNumber - 1][i+1];
+			biNorm2 = cpBiNormsRight[controlPointNumber - 1][i+1];
+			tangent2 = cpTangentsRight[controlPointNumber - 1][i+1];
+			position2 = cpPositionsRight[controlPointNumber - 1][i+1];
+		}
 
 		glBegin(GL_LINES);
 
@@ -702,7 +720,7 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 		}
 
 		// Draw the back rectangle
-		if (i == cpNorms[controlPointNumber - 1].size() - 2) { // If this is the last section of norms, draw the back quad
+		if (i == cpNormsLeft[controlPointNumber - 1].size() - 2 || i == cpNormsRight[controlPointNumber - 1].size() - 2) { // If this is the last section of norms, draw the back quad
 			glColor3f(1.0, 1.0, 0.0); 
 			glBegin(GL_QUADS);
 
@@ -852,7 +870,7 @@ void drawRailSection(int splineNumber, int controlPointNumber) {
 	}
 }
 
-void getNormals(int splineNumber, int controlPointNumber) {
+void getNormals(int splineNumber, int controlPointNumber, float offset) {
 	// Get p0 to p3 to attain the proper point p for the point placement
 	p0 = g_Splines[splineNumber].points[controlPointNumber-1]; // Pi-1
 	p1 = g_Splines[splineNumber].points[controlPointNumber  ]; // Pi
@@ -864,10 +882,18 @@ void getNormals(int splineNumber, int controlPointNumber) {
 	std::vector<point> binorms;
 	std::vector<point> tangents;
 	std::vector<point> points;
-	cpTangents.push_back(tangents);
-	cpNorms.push_back(norms);
-	cpBiNorms.push_back(binorms);
-	cpPositions.push_back(points);
+	if (offset == -1) {
+		cpTangentsLeft.push_back(tangents);
+		cpNormsLeft.push_back(norms);
+		cpBiNormsLeft.push_back(binorms);
+		cpPositionsLeft.push_back(points);
+	}
+	else {
+		cpTangentsRight.push_back(tangents);
+		cpNormsRight.push_back(norms);
+		cpBiNormsRight.push_back(binorms);
+		cpPositionsRight.push_back(points);	
+	}
 	
 	// Calculate the vectors
 	while(distanceIteratorNum < 1) {
@@ -886,10 +912,21 @@ void getNormals(int splineNumber, int controlPointNumber) {
 		}		
 
 		// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
-		cpTangents[controlPointNumber-1].push_back(tangent_current);
-		cpNorms[controlPointNumber-1].push_back(norm_current);
-		cpBiNorms[controlPointNumber-1].push_back(biNorm_current);
-		cpPositions[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
+		if (offset == -1) {
+			cpTangentsLeft[controlPointNumber-1].push_back(tangent_current);
+			cpNormsLeft[controlPointNumber-1].push_back(norm_current);
+			cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
+			cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset;
+		}
+
+		else {
+			cpTangentsRight[controlPointNumber-1].push_back(tangent_current);
+			cpNormsRight[controlPointNumber-1].push_back(norm_current);
+			cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
+			cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;
+		}
 
 		// Set the current norm/biNorm to be the previous ones now
 		norm_prev = norm_current;
@@ -909,11 +946,21 @@ void getNormals(int splineNumber, int controlPointNumber) {
 	norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
 	biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
 	
-	// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
-	cpTangents[controlPointNumber-1].push_back(tangent_current);
-	cpNorms[controlPointNumber-1].push_back(norm_current);
-	cpBiNorms[controlPointNumber-1].push_back(biNorm_current);
-	cpPositions[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
+	if (offset == -1) {
+		// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
+		cpTangentsLeft[controlPointNumber-1].push_back(tangent_current);
+		cpNormsLeft[controlPointNumber-1].push_back(norm_current);
+		cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
+		cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
+		cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset;
+	}
+	else {
+		cpTangentsRight[controlPointNumber-1].push_back(tangent_current);
+		cpNormsRight[controlPointNumber-1].push_back(norm_current);
+		cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
+		cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
+		cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;
+	}
 
 	// Set the current norm/biNorm to be the previous ones now
 	norm_prev = norm_current;
@@ -927,7 +974,13 @@ void drawCrossSections() { // Draw the cross sections for the coaster
 	// Get all of the norms for the cross sections
 	for (int i = 0; i < g_iNumOfSplines; i++) {
 		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) { // Draw the control points, and see if the spline goes through
-			getNormals(i, j);
+			getNormals(i, j, -1);
+		}
+	}
+
+	for (int i = 0; i < g_iNumOfSplines; i++) {
+		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) { // Draw the control points, and see if the spline goes through
+			getNormals(i, j, 1);
 		}
 	}
 
@@ -935,7 +988,13 @@ void drawCrossSections() { // Draw the cross sections for the coaster
 	// Draw them all out here
 	for (int i = 0; i < g_iNumOfSplines; i++) {
 		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) { // Draw the control points, and see if the spline goes through
-			drawRailSection(i, j);
+			drawRailSection(i, j, true);
+		}
+	}
+
+	for (int i = 0; i < g_iNumOfSplines; i++) {
+		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) { // Draw the control points, and see if the spline goes through
+			drawRailSection(i, j, false);
 		}
 	}
 }
@@ -1112,18 +1171,18 @@ rotation/translation/scaling */
 	glTranslatef(-camPosition.x*2, -camPosition.y*2, -camPosition.z*2);
 
 	/* Test Code for the spline */
-	//glPushMatrix(); // Push on the new transformations that are about to be done
+	glPopMatrix(); // push on the new transformations that are about to be done
 	
-	////*
-	//glTranslatef(
-	//	(translateMultDPI * -g_vLandTranslate[0]), // Inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
-	//	(translateMultDPI * g_vLandTranslate[1]),
-	//	(translateMultDPI * -g_vLandTranslate[2])
-	//); // Translate the matrix
+	//*
+	glTranslatef(
+		(translateMultDPI * -g_vLandTranslate[0]), // inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
+		(translateMultDPI * g_vLandTranslate[1]),
+		(translateMultDPI * -g_vLandTranslate[2])
+	); // translate the matrix
 
-	//glRotatef(-g_vLandRotate[0], 1, 0, 0); // Rotate along the x-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the X-axis rotation; it's what I am used to. (Autodesk Maya usage)
-	//glRotatef(-g_vLandRotate[1], 0, 1, 0); // Rotate along the y-axis - This value was inverted (multiplied by -1) because it made more sense to me to invert the Y-axis rotation; it's what I am used to. (Autodesk Maya usage)
-	//glRotatef(g_vLandRotate[2], 0, 0, 1); // Rotate along the z-axis
+	glRotatef(-g_vLandRotate[0], 1, 0, 0); // rotate along the x-axis - this value was inverted (multiplied by -1) because it made more sense to me to invert the x-axis rotation; it's what i am used to. (autodesk maya usage)
+	glRotatef(-g_vLandRotate[1], 0, 1, 0); // rotate along the y-axis - this value was inverted (multiplied by -1) because it made more sense to me to invert the y-axis rotation; it's what i am used to. (autodesk maya usage)
+	glRotatef(g_vLandRotate[2], 0, 0, 1); // rotate along the z-axis
 
 	glScalef(
 		(scaleMultDPI * g_vLandScale[0]),
@@ -1137,7 +1196,7 @@ rotation/translation/scaling */
 
 //	setCameraPlacement();
 
-	//glPopMatrix(); // Remove the transformation matrix
+	glPopMatrix(); // Remove the transformation matrix
 
 	glutSwapBuffers();
 }
