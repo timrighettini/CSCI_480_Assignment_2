@@ -260,7 +260,7 @@ point getCrossProduct(point a, point b) {
 	return c;
 }
 
-void setCameraPlacement(int val) {
+void setCameraPlacement() {
 
 	// Get p0 to p3 to attain the proper point p for the camera placement
 	p0 = g_Splines[currentSplineNum].points[controlPointNum-1]; // Pi-1
@@ -300,11 +300,11 @@ void setCameraPlacement(int val) {
 
 	// Finally, set the camera's position
 
-	positionCamera(
-		camPosition.x         , camPosition.y         , camPosition.z, 
-		cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
-		0.0, 1.0, 0.0
-	); // Sets the camera position
+	//positionCamera(
+	//	camPosition.x         , camPosition.y         , camPosition.z, 
+	//	cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
+	//	biNorm_current.x, biNorm_current.y, biNorm_current.z//0.0, 1.0, 0.0
+	//); // Sets the camera position
 
 	/*
 		Viewing Angle: 60
@@ -1166,7 +1166,7 @@ char* createFileName() {
 
 void idle() {
   /* do some stuff... */
-	glutTimerFunc(500, setCameraPlacement, 1);	
+	//glutTimerFunc(500, setCameraPlacement, 1);	
 
 	if (saveScreenShotOn == true) {
 		saveScreenshot(createFileName());
@@ -1188,8 +1188,8 @@ rotation/translation/scaling */
 
 	glMatrixMode(GL_MODELVIEW); // Set mode to ModelView Here, just to be sure...
 
-		positionCamera(
-		-camPosition.x         , -camPosition.y         , -camPosition.z, 
+	positionCamera(
+		camPosition.x         , camPosition.y         , camPosition.z, 
 		-cameraOriginPosition.x, -cameraOriginPosition.y, -cameraOriginPosition.z, 
 		0.0, 1.0, 0.0
 	); // Sets the camera position
@@ -1198,10 +1198,10 @@ rotation/translation/scaling */
 	glRotatef(biNorm_current.x, 1, 0, 0);
 	glRotatef(biNorm_current.y, 0, 1, 0);
 	glRotatef(biNorm_current.z, 0, 0, 1);
-	glTranslatef(-camPosition.x*2, -camPosition.y*2, -camPosition.z*2);
+	//glTranslatef(-camPosition.x*2, -camPosition.y*2, -camPosition.z*2);
 
 	/* Test Code for the spline */
-	glPopMatrix(); // push on the new transformations that are about to be done
+	//glPushMatrix(); // push on the new transformations that are about to be done
 	
 	/*
 	glTranslatef(
@@ -1227,9 +1227,9 @@ rotation/translation/scaling */
 	// Call the display List
 	glCallList(splineTrackDisplayList);
 
-//	setCameraPlacement();
+	setCameraPlacement();
 
-	glPopMatrix(); // Remove the transformation matrix
+	//glPopMatrix(); // Remove the transformation matrix
 
 	glutSwapBuffers();
 }
@@ -1389,6 +1389,8 @@ void loadAnimations() {
 		// Load in the image
 		groundAnimationFrames[i] = jpeg_read(newName, NULL);
 
+		delete[] newName;
+
 		if (!groundAnimationFrames[i]) {
 			std::cerr << "Image not loaded for Ground Plane, exiting" << std::endl;
 			exit(1);
@@ -1422,6 +1424,8 @@ void loadAnimations() {
 
 		// Load in the image
 		skyAnimationFrames[i] = jpeg_read(newName, NULL);
+
+		delete[] newName;
 
 		if (!skyAnimationFrames[i]) {
 			std::cerr << "Image not loaded for Sky Plane, exiting" << std::endl;
