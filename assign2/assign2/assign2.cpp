@@ -141,6 +141,9 @@ point tangent_current;
 point norm_current;
 point biNorm_current;
 
+// Arbitrary vector to be used for initial Calculation
+point arbitrary;
+
 // Store all Norms and BiNorms at control points -- or else bad things happen because of global -- initialize these arrays when the size number of splines/control points is found
 // These vectors will hold vectors that correspond to certain (u) values throughout any given spline segment
 std::vector<std::vector<point>> cpNormsLeft;
@@ -196,6 +199,11 @@ void positionCamera(double eye_x, double eye_y, double eye_z, double center_x, d
 point getUnitVector(point a) {
 	// Get the magnitude
 	float aDist = pow(a.x, 2) + pow(a.y, 2) + pow(a.z, 2);
+
+	if (aDist == 0) {
+		return a; // Cannot divide by zero
+	}
+
 	aDist = sqrt(aDist);
 
 	// Normalize the vector
@@ -930,6 +938,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 			cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
 			cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
 			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset;
+			if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
+				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset;	
+			}
+			else { // Draw the track along the z instead of the y axis so it does not get in the way
+				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset;
+			}						
 		}
 
 		else {
@@ -937,7 +951,13 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 			cpNormsRight[controlPointNumber-1].push_back(norm_current);
 			cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
 			cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;						
+			if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
+				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset;
+			}
+			else { // Draw the track along the z instead of the y axis so it does not get in the way
+				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset;
+			}
 		}
 
 		// Set the current norm/biNorm to be the previous ones now
@@ -959,19 +979,30 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 	biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
 	
 	if (offset == -1) {
-		// Then store the current tangent, norm, and biNorm within array indices -- will have to reverse iterate through this list to match up with the control points
 		cpTangentsLeft[controlPointNumber-1].push_back(tangent_current);
 		cpNormsLeft[controlPointNumber-1].push_back(norm_current);
 		cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
 		cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
 		cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset;
+		if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset;	
+		}
+		else { // Draw the track along the z instead of the y axis so it does not get in the way
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset;
+		}	
 	}
 	else {
 		cpTangentsRight[controlPointNumber-1].push_back(tangent_current);
 		cpNormsRight[controlPointNumber-1].push_back(norm_current);
 		cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
 		cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-		cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;
+		cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset;						
+		if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset;
+		}
+		else { // Draw the track along the z instead of the y axis so it does not get in the way
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset;
+		}
 	}
 
 	// Set the current norm/biNorm to be the previous ones now
@@ -1188,16 +1219,18 @@ rotation/translation/scaling */
 
 	glMatrixMode(GL_MODELVIEW); // Set mode to ModelView Here, just to be sure...
 
+	setCameraPlacement(); // Set up the camera to point into the correct place
+
 	positionCamera(
 		camPosition.x         , camPosition.y         , camPosition.z, 
 		-cameraOriginPosition.x, -cameraOriginPosition.y, -cameraOriginPosition.z, 
-		0.0, 1.0, 0.0
+		biNorm_current.x, biNorm_current.y, biNorm_current.z//0.0, 1.0, 0.0
 	); // Sets the camera position
 	
 
-	glRotatef(biNorm_current.x, 1, 0, 0);
+	/*glRotatef(biNorm_current.x, 1, 0, 0);
 	glRotatef(biNorm_current.y, 0, 1, 0);
-	glRotatef(biNorm_current.z, 0, 0, 1);
+	glRotatef(biNorm_current.z, 0, 0, 1);*/
 	//glTranslatef(-camPosition.x*2, -camPosition.y*2, -camPosition.z*2);
 
 	/* Test Code for the spline */
@@ -1226,8 +1259,6 @@ rotation/translation/scaling */
 
 	// Call the display List
 	glCallList(splineTrackDisplayList);
-
-	setCameraPlacement();
 
 	//glPopMatrix(); // Remove the transformation matrix
 
@@ -1316,29 +1347,46 @@ int loadSplines(char *argv) {
 }
 
 void calculateInitialVectors() {
-	// Initialize the beginning tangents
-	tangent_prev = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Initialize this value to the first tangent	
-	tangent_current = tangent_prev;
-
-	// Arbitrary vector
 	point arb;
 	arb.x = 0;
 	arb.y = 1;
 	arb.z = 0;
+	while (true) {
+		// Initialize the beginning tangents
+		tangent_prev = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Initialize this value to the first tangent	
+		tangent_current = tangent_prev;
 
-	// Initialize the norms
-	norm_prev = getUnitVector(getCrossProduct(getUnitVector(tangent_prev), getUnitVector(arb))); // Get the unit vector for T0 X (1,1,1)
-	norm_current = norm_prev;
+		// Initialize the norms
+		norm_prev = getUnitVector(getCrossProduct(getUnitVector(tangent_prev), getUnitVector(arb))); // Get the unit vector for T0 X (1,1,1)
+		norm_current = norm_prev;
 
-	// Initialize the biNorms
-	biNorm_prev = getUnitVector(getCrossProduct(getUnitVector(tangent_prev), getUnitVector(norm_prev))); // Get the unit vector for T0 X N0
-	biNorm_current = biNorm_prev;
+		// Initialize the biNorms
+		biNorm_prev = getUnitVector(getCrossProduct(getUnitVector(tangent_prev), getUnitVector(norm_prev))); // Get the unit vector for T0 X N0
+		biNorm_current = biNorm_prev;
+
+		if (biNorm_current.y < 0) { // If norm is pointing upside down, flip it
+			biNorm_current.y *= -1;
+			biNorm_prev.y *= -1;
+		}	
+		if ((norm_current.x == 0 && norm_current.y == 0 && norm_current.z == 0)
+			|| (biNorm_current.x == 0 && biNorm_current.y == 0 && biNorm_current.z == 0)) { // If vectors are zero, change the arbitrary vector and cross again
+			arb.x = 1;
+			arb.y = 0;
+			arb.z = 0;
+			continue;
+		}
+		else { // Break
+			break;
+		}
+	}
+
+	arbitrary = arb;
 
 	// Test to see if the values are prependicular to each other
-	//std::cout << (norm_prev.x * tangent_prev.x) + (norm_prev.y * tangent_prev.y) + (norm_prev.z * tangent_prev.z) << std::endl;
-	//std::cout << (norm_prev.x *  biNorm_prev.x) + (norm_prev.y *  biNorm_prev.y) + (norm_prev.z *  biNorm_prev.z) << std::endl;
-	//std::cout << (biNorm_prev.x * tangent_prev.x) + (biNorm_prev.y * tangent_prev.y) + (biNorm_prev.z * tangent_prev.z) << std::endl;
-	//std::cout << (biNorm_prev.x * norm_prev.x * tangent_prev.x) + (biNorm_prev.y * norm_prev.y * tangent_prev.y) + (biNorm_prev.z * norm_prev.z * tangent_prev.z) << std::endl;
+	std::cout << (norm_prev.x * tangent_prev.x) + (norm_prev.y * tangent_prev.y) + (norm_prev.z * tangent_prev.z) << std::endl;
+	std::cout << (norm_prev.x *  biNorm_prev.x) + (norm_prev.y *  biNorm_prev.y) + (norm_prev.z *  biNorm_prev.z) << std::endl;
+	std::cout << (biNorm_prev.x * tangent_prev.x) + (biNorm_prev.y * tangent_prev.y) + (biNorm_prev.z * tangent_prev.z) << std::endl;
+	std::cout << (biNorm_prev.x * norm_prev.x * tangent_prev.x) + (biNorm_prev.y * norm_prev.y * tangent_prev.y) + (biNorm_prev.z * norm_prev.z * tangent_prev.z) << std::endl;
 }
 
 void compileDisplayList() { // This function will compile the display list before the program starts
@@ -1490,13 +1538,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	myinitTexture(); // Do all of the texture related initializations separately
 	calculateLowFarPointsSplines(); // Get the low points and the max distances away from the center in terms of the spline control points
 
-	compileDisplayList(); // Compile the display list
-
 	// Initialize the camera traversal globals
 	// Will be used for traveling through a spline, iteratively, and non realistically
 	controlPointNum = 1; // This is which control point/spline segment the camera is currently on
 	currentSplineNum = 0; // This value will increase if there are multiple splines, otherwise, it will most likely stay at zero
 	distanceIteratorNum = 0; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
+
+	setCameraPlacement(); // Calculate here just to check how the vectors come out, and compile the display list accordingly
+
+	compileDisplayList(); // Compile the display list
 
 	glutMainLoop();
 
