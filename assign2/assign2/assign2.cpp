@@ -305,9 +305,9 @@ void setCameraPlacement() {
 	// Then, get where the camera should be pointing to
 	cameraOriginPosition = tangent_current; // Set the tangent to where the camera should be looking towards
 
-	cameraOriginPosition.x *= 100;
-	cameraOriginPosition.y *= 100;
-	cameraOriginPosition.z *= 100;
+	cameraOriginPosition.x *= 500;
+	cameraOriginPosition.y *= 500;
+	cameraOriginPosition.z *= 500;
 
 	// Finally, set the camera's position
 
@@ -316,15 +316,6 @@ void setCameraPlacement() {
 	//	cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
 	//	biNorm_current.x, biNorm_current.y, biNorm_current.z//0.0, 1.0, 0.0
 	//); // Sets the camera position
-
-	/*
-		Viewing Angle: 60
-		Aspect Ratio: 1.333 (4:3)
-		Near Clipping Plane: 0.01
-		Far  "            ": 1000.0
-	*/
-	// Set the matrix mode back to modelView, so things do not get messed up
-
 
 	distanceIteratorNum += INCREMENTOR;
 
@@ -346,8 +337,7 @@ void setCameraPlacement() {
 			currentSplineNum++;
 			if (currentSplineNum == g_iNumOfSplines) { // Reset currentSplineNum value back to 0 if we have passed the last spline
 				currentSplineNum = 0;
-			}
-			calculateInitialVectors();
+			}			
 		}
 	}
 }
@@ -440,6 +430,7 @@ void calculateLowFarPointsSplines() {
 	std::cout << "Lowest Point: " << lowestPoint <<  std::endl;
 	std::cout << "Bottom Skybox Point: " << FLOOR_SUB <<  std::endl;
 }
+
 /* Assignment 1 callbacks */
 /* converts mouse drags into information about 
 rotation/translation/scaling */
@@ -550,11 +541,6 @@ void drawLine(point v0, point v1) {
 	glVertex3f(v1.x, v1.y, v1.z);
 }
 
-/*
-int controlPointNum = 1; // This is which control point/spline segment the camera is currently pon
-float distanceIteratorNum = 0.0000; // This value will go from 0 to 1, when it equals 1, it will reset back to zero and the number above will increment++ or to 1
-*/
-
 // Spline Functions for assignment #2
 void drawSpline(float u0, float u1, float maxLineLengthSquared) {
 	float uMidPoint = (u0 + u1) / (float)2; // Get the midpoint between these two values
@@ -583,7 +569,8 @@ void drawSpline(float u0, float u1, float maxLineLengthSquared) {
 
 void drawAllSplines() {
 	for (int i = 0; i < g_iNumOfSplines; i++) {
-		glBegin(GL_LINES);
+		glLineWidth(2.5);
+		glBegin(GL_LINES);		
 		for (int j = 1; j <= g_Splines[i].numControlPoints - 3; j++) {
 			// Start at the second point, because the first point doesn't help attach to the curve at the beginning
 			// End at the third to last point, because the last of the points doesn't help attach to the curve either at the end
@@ -601,9 +588,14 @@ void drawAllSplines() {
 }
 
 void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft) {
-	float railRadius = trackDiameter/2; // How far the unitized vectors will be scaled for attaining the proper sized rail
+	float railRadius = trackDiameter * 0.5 * (maxDist * 0.075); // How far the unitized vectors will be scaled for attaining the proper sized rail
 
-	glLineWidth(100 * trackDiameter);
+	glLineWidth(75.00 * trackDiameter * (maxDist * 0.075)); // Make the track smaller as the rails get closer to the spline
+
+	if (railRadius > 0.030) { // Floor the value so it does not get too big
+		railRadius = 0.030;
+		glLineWidth(2); // Also floor the line width value, so the purple does not get too big
+	}
 	
 	for (int i = 0; i < cpNormsLeft[controlPointNumber - 1].size() - 1; i++) {
 
@@ -710,7 +702,7 @@ void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft)
 		// Draw the six rectangles for the cross section, using the method described in Level 5 on the website
 
 		// Draw the front rectangle
-		if (i == 0 && splineNumber == 1) { // If this is the first norm section, draw the front quad
+		if (i == 0 && controlPointNumber == 1) { // If this is the first cross section, draw the front quad
 			glColor3f(1.0, 1.0, 0.0); 
 			glBegin(GL_QUADS);
 
@@ -742,7 +734,11 @@ void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft)
 		}
 
 		// Draw the back rectangle
-		if (i == cpNormsLeft[controlPointNumber - 1].size() - 2 || i == cpNormsRight[controlPointNumber - 1].size() - 2) { // If this is the last section of norms, draw the back quad
+		if ((i == cpNormsLeft[controlPointNumber - 1].size() - 2 
+			|| i == cpNormsRight[controlPointNumber - 1].size() - 2) 
+			&& controlPointNumber == g_Splines[i].numControlPoints - 3) 
+		{ // If this is the last cross section, draw the back quad
+
 			glColor3f(1.0, 1.0, 0.0); 
 			glBegin(GL_QUADS);
 
@@ -863,7 +859,7 @@ void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft)
 
 		// Draw the bottom rectangle
 		glBegin(GL_QUADS);
-			glColor3f(0.8, 0.8, 0.8); // Make the top a special color				
+			glColor3f(0.8, 0.8, 0.8); // Make the bottom a special color				
 			glVertex3f( // v0
 				position.x + railRadius * (norm.x - biNorm.x), 
 				position.y + railRadius * (norm.y - biNorm.y), 
@@ -1044,20 +1040,6 @@ void drawCrossSections() { // Draw the cross sections for the coaster
 	}
 }
 
-/* represents one control point along the spline
-struct point {
-	double x;
-	double y;
-	double z;
-};
-
-spline struct which contains how many control points, and an array of control points 
-struct spline {
-	int numControlPoints;
-	struct point *points;
-};
-*/
-
 void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	// Enable OpenGL texturing
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); // Use texture color only -- no lighting
@@ -1225,10 +1207,6 @@ void idle() {
 }
 
 void display() {
-  /* draw 1x1 cube about origin */
-  /* replace this code with your height field implementation */
-  /* you may also want to precede it with your 
-rotation/translation/scaling */
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Obviously, clear these values, or KABOOM!!!
 	glLoadIdentity(); // Reset the Matrix
@@ -1242,41 +1220,12 @@ rotation/translation/scaling */
 		-cameraOriginPosition.x, -cameraOriginPosition.y, -cameraOriginPosition.z, 
 		biNorm_current.x, biNorm_current.y, biNorm_current.z//0.0, 1.0, 0.0
 	); // Sets the camera position
-	
-
-	/*glRotatef(biNorm_current.x, 1, 0, 0);
-	glRotatef(biNorm_current.y, 0, 1, 0);
-	glRotatef(biNorm_current.z, 0, 0, 1);*/
-	//glTranslatef(-camPosition.x*2, -camPosition.y*2, -camPosition.z*2);
-
-	/* Test Code for the spline */
-	//glPushMatrix(); // push on the new transformations that are about to be done
-	
-	/*
-	glTranslatef(
-		(translateMultDPI * -g_vLandTranslate[0]), // inverting this value (multiplying by -1) made it so that the shape followed the mouse for a-axis translations
-		(translateMultDPI * g_vLandTranslate[1]),
-		(translateMultDPI * -g_vLandTranslate[2])
-	); // translate the matrix
-
-	glRotatef(-g_vLandRotate[0], 1, 0, 0); // rotate along the x-axis - this value was inverted (multiplied by -1) because it made more sense to me to invert the x-axis rotation; it's what i am used to. (autodesk maya usage)
-	glRotatef(-g_vLandRotate[1], 0, 1, 0); // rotate along the y-axis - this value was inverted (multiplied by -1) because it made more sense to me to invert the y-axis rotation; it's what i am used to. (autodesk maya usage)
-	glRotatef(g_vLandRotate[2], 0, 0, 1); // rotate along the z-axis
-
-	glScalef(
-		(scaleMultDPI * g_vLandScale[0]),
-		(scaleMultDPI * g_vLandScale[1]),
-		(scaleMultDPI * g_vLandScale[2])
-	); // Scale the Matrix
-	//*/
 
 	// Draw the textured skybox -- I cannot put this in the displayList because of the animation
 	drawSkyBox(maxDist * MAX_DIST_MULT, lowestPoint + FLOOR_SUB);
 
 	// Call the display List
 	glCallList(splineTrackDisplayList);
-
-	//glPopMatrix(); // Remove the transformation matrix
 
 	glutSwapBuffers();
 }
@@ -1399,10 +1348,10 @@ void calculateInitialVectors() {
 	arbitrary = arb;
 
 	// Test to see if the values are prependicular to each other
-	std::cout << (norm_prev.x * tangent_prev.x) + (norm_prev.y * tangent_prev.y) + (norm_prev.z * tangent_prev.z) << std::endl;
-	std::cout << (norm_prev.x *  biNorm_prev.x) + (norm_prev.y *  biNorm_prev.y) + (norm_prev.z *  biNorm_prev.z) << std::endl;
-	std::cout << (biNorm_prev.x * tangent_prev.x) + (biNorm_prev.y * tangent_prev.y) + (biNorm_prev.z * tangent_prev.z) << std::endl;
-	std::cout << (biNorm_prev.x * norm_prev.x * tangent_prev.x) + (biNorm_prev.y * norm_prev.y * tangent_prev.y) + (biNorm_prev.z * norm_prev.z * tangent_prev.z) << std::endl;
+	//std::cout << (norm_prev.x * tangent_prev.x) + (norm_prev.y * tangent_prev.y) + (norm_prev.z * tangent_prev.z) << std::endl;
+	//std::cout << (norm_prev.x *  biNorm_prev.x) + (norm_prev.y *  biNorm_prev.y) + (norm_prev.z *  biNorm_prev.z) << std::endl;
+	//std::cout << (biNorm_prev.x * tangent_prev.x) + (biNorm_prev.y * tangent_prev.y) + (biNorm_prev.z * tangent_prev.z) << std::endl;
+	//std::cout << (biNorm_prev.x * norm_prev.x * tangent_prev.x) + (biNorm_prev.y * norm_prev.y * tangent_prev.y) + (biNorm_prev.z * norm_prev.z * tangent_prev.z) << std::endl;
 }
 
 void compileDisplayList() { // This function will compile the display list before the program starts
