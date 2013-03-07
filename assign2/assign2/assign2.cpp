@@ -588,9 +588,9 @@ void drawAllSplines() {
 }
 
 void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft) {
-	float railRadius = trackDiameter * 0.5 * (maxDist * 0.075); // How far the unitized vectors will be scaled for attaining the proper sized rail
+	float railRadius = trackDiameter * 0.5 * (maxDist * 0.080); // How far the unitized vectors will be scaled for attaining the proper sized rail
 
-	glLineWidth(75.00 * trackDiameter * (maxDist * 0.075)); // Make the track smaller as the rails get closer to the spline
+	glLineWidth(75.00 * trackDiameter * (maxDist * 0.080)); // Make the track smaller as the rails get closer to the spline
 
 	if (railRadius > 0.030) { // Floor the value so it does not get too big
 		railRadius = 0.030;
@@ -935,12 +935,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 			cpNormsLeft[controlPointNumber-1].push_back(norm_current);
 			cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
 			cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.01);
 			if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);	
+				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.01);	
 			}
 			else { // Draw the track along the z instead of the y axis so it does not get in the way
-				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
+				cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.01);
 			}						
 		}
 
@@ -949,12 +949,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 			cpNormsRight[controlPointNumber-1].push_back(norm_current);
 			cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
 			cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);						
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.01);						
 			if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);
+				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.01);
 			}
 			else { // Draw the track along the z instead of the y axis so it does not get in the way
-				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
+				cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.01);
 			}
 		}
 
@@ -981,12 +981,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 		cpNormsLeft[controlPointNumber-1].push_back(norm_current);
 		cpBiNormsLeft[controlPointNumber-1].push_back(biNorm_current);
 		cpPositionsLeft[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-		cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);
+		cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.01);
 		if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);	
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.01);	
 		}
 		else { // Draw the track along the z instead of the y axis so it does not get in the way
-			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
+			cpPositionsLeft[controlPointNumber-1][cpPositionsLeft[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.01);
 		}	
 	}
 	else {
@@ -994,12 +994,12 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 		cpNormsRight[controlPointNumber-1].push_back(norm_current);
 		cpBiNormsRight[controlPointNumber-1].push_back(biNorm_current);
 		cpPositionsRight[controlPointNumber-1].push_back(getCoordinateXYZ(distanceIteratorNum));
-		cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.015);						
+		cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].x += offset * (maxDist * 0.01);						
 		if (!(arbitrary.x >= 1)) { // This means tha that the y-up arbitrary vector worked, go with regular case for track drawing
-			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.015);
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].y += offset * (maxDist * 0.01);
 		}
 		else { // Draw the track along the z instead of the y axis so it does not get in the way
-			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.015);
+			cpPositionsRight[controlPointNumber-1][cpPositionsRight[controlPointNumber-1].size() - 1].z += offset * (maxDist * 0.01);
 		}
 	}
 
