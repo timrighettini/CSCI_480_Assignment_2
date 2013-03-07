@@ -133,7 +133,7 @@ float INCREMENTOR = 0.0175; // Will decide how fast the roller coaster should go
 int windowX = 640;  
 int windowY = 480; 
 
-// Values for holding tangents, norms, and biNorms
+// Values for holding tangents, norms, and biNorms -- refer to Sloan's method as to why I have set it up like this
 point tangent_prev;
 point norm_prev;
 point biNorm_prev;
@@ -242,7 +242,7 @@ point getCoordinateXYZ(float u) {
 point getTagentXYZ(float u) {
 	point p; // Instantiate the point
 
-	// Use a derived version of the C-R matrix formula
+	// Use a derived derivative version of the C-R matrix formula
 	p.x = ( p0.x * ( -(3 * pow(u, 2) * s)       + (4 * u * s)         - (s) )  ) + 
 		  ( p1.x * (  (3 * pow(u, 2) * (2 - s)) + (2 * u * ((s - 3)))     + (  0  ) )  ) + 
 		  ( p2.x * (  (3 * pow(u, 2) * (s - 2)) + (2 * u * (3 - (2 * s))) + (s) )  ) + 
@@ -291,11 +291,6 @@ void setCameraPlacement() {
 		// Calculate the norm/biNorm of the current frame based upon values from the previous/current frame
 		norm_current = getUnitVector(getCrossProduct(getUnitVector(biNorm_prev), getUnitVector(tangent_current)));
 		biNorm_current = getUnitVector(getCrossProduct(getUnitVector(tangent_current), getUnitVector(norm_current)));
-
-	/*	std::cout << (norm_current.x * tangent_current.x) + (norm_current.y * tangent_current.y) + (norm_current.z * tangent_current.z) << std::endl;
-		std::cout << (norm_current.x *  biNorm_current.x) + (norm_current.y *  biNorm_current.y) + (norm_current.z *  biNorm_current.z) << std::endl;
-		std::cout << (biNorm_current.x * tangent_current.x) + (biNorm_current.y * tangent_current.y) + (biNorm_current.z * tangent_current.z) << std::endl;
-		std::cout << (biNorm_current.x * norm_current.x * tangent_current.x) + (biNorm_current.y * norm_current.y * tangent_current.y) + (biNorm_current.z * norm_current.z * tangent_current.z) << std::endl;*/
 	}
 
 	// Now get the point for the camera placement
@@ -309,25 +304,12 @@ void setCameraPlacement() {
 	cameraOriginPosition.y *= 500;
 	cameraOriginPosition.z *= 500;
 
-	// Finally, set the camera's position
-
-	//positionCamera(
-	//	camPosition.x         , camPosition.y         , camPosition.z, 
-	//	cameraOriginPosition.x, cameraOriginPosition.y, cameraOriginPosition.z, 
-	//	biNorm_current.x, biNorm_current.y, biNorm_current.z//0.0, 1.0, 0.0
-	//); // Sets the camera position
-
 	distanceIteratorNum += INCREMENTOR;
 
-	// Set the current norm/biNorm to be the previous ones now
+	// Set the current tangent/norm/biNorm to be the previous ones now
+	tangent_prev = tangent_current;
 	norm_prev = norm_current;
 	biNorm_prev = biNorm_current;
-
-	//std::cout << distanceIteratorNum << std::endl;
-	//std::cout << camPosition.x << std::endl;
-	//std::cout << camPosition.y << std::endl;
-	//std::cout << camPosition.z << std::endl;
-	//std::cout << controlPointNum << std::endl;
 
 	if (distanceIteratorNum >= 1) { // Reset u and increment the control point num ++
 		distanceIteratorNum = 0.000;
@@ -542,7 +524,7 @@ void drawLine(point v0, point v1) {
 }
 
 // Spline Functions for assignment #2
-void drawSpline(float u0, float u1, float maxLineLengthSquared) {
+void drawSpline(float u0, float u1, float maxLineLengthSquared) { // This is the recursive method of drawing out the splines
 	float uMidPoint = (u0 + u1) / (float)2; // Get the midpoint between these two values
 	point c0 = getCoordinateXYZ(u0); // Get the coordindate for u0
 	point c1 = getCoordinateXYZ(u1); // Get the coordindate for u1
@@ -599,7 +581,8 @@ void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft)
 	
 	for (int i = 0; i < cpNormsLeft[controlPointNumber - 1].size() - 1; i++) {
 
-		// To Test, let's just draw some points to the screen
+		// This will draw lines AND polygons to the screen for the double rails
+
 		glColor3f(1.0, 0.0, 1.0); // Color for the lines
 
 		point norm; //= cpNormsLeft[cpNormsLeft.size() - controlPointNumber];
@@ -634,6 +617,8 @@ void drawRailSection(int splineNumber, int controlPointNumber, bool drawingLeft)
 			tangent2 = cpTangentsRight[controlPointNumber - 1][i+1];
 			position2 = cpPositionsRight[controlPointNumber - 1][i+1];
 		}
+
+		// Begin drawing the tubes and boundary lines -- refer to the Level 5 Diagrams on the website for why I set up like this
 
 		glBegin(GL_LINES);
 
@@ -958,7 +943,8 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 			}
 		}
 
-		// Set the current norm/biNorm to be the previous ones now
+		// Set the current tangent/norm/biNorm to be the previous ones now
+		tangent_prev = tangent_current;
 		norm_prev = norm_current;
 		biNorm_prev = biNorm_current;
 
@@ -1003,7 +989,8 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 		}
 	}
 
-	// Set the current norm/biNorm to be the previous ones now
+	// Set the current tangent/norm/biNorm to be the previous ones now
+	tangent_prev = tangent_current;
 	norm_prev = norm_current;
 	biNorm_prev = biNorm_current;
 
@@ -1012,6 +999,7 @@ void getNormals(int splineNumber, int controlPointNumber, float offset) {
 
 void drawCrossSections() { // Draw the cross sections for the coaster
 	// Loop through all of the control points
+
 	// Get all of the norms for the cross sections
 	for (int i = 0; i < g_iNumOfSplines; i++) {
 		for (int j = 1; j < g_Splines[i].numControlPoints - 2; j++) { // Draw the control points, and see if the spline goes through
@@ -1051,11 +1039,12 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	float halfGroundPlaneSize = groundPlaneSize/2; // Saves on FP divisions
 
 	// Load in the ground texture
-	// Swap Animation Frames
+	// Swap Animation Frames if animation is enabled, else, draw the base frame
 	if (animationOn == true)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundAnimationFrames[groundFrameCounter]->nx,  groundAnimationFrames[groundFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  groundAnimationFrames[groundFrameCounter]->pix);
 	else 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, groundTexture->nx,  groundTexture->ny, 0, GL_RGB, GL_UNSIGNED_BYTE, groundTexture->pix);
+
 	if (animationSwitch == 1) {
 		groundFrameCounter++;
 	}
@@ -1072,7 +1061,7 @@ void drawSkyBox(float groundPlaneSize, float groundOffset) {
 	glEnd();
 
 	// Load in the sky texture
-	// Swap Animation Frames
+	// Swap Animation Frames if animation is enabled, else, draw the base frame
 	if (animationOn == true)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, skyAnimationFrames[skyFrameCounter]->nx,  skyAnimationFrames[skyFrameCounter]->ny, 0, GL_RGB, GL_UNSIGNED_BYTE,  skyAnimationFrames[skyFrameCounter]->pix);
 	else 
@@ -1316,7 +1305,7 @@ void calculateInitialVectors() {
 	arb.x = 0;
 	arb.y = 1;
 	arb.z = 0;
-	while (true) {
+	while (true) { // Only break when the norm and biNorm != 0 magnitude
 		// Initialize the beginning tangents
 		tangent_prev = getUnitVector(getTagentXYZ(distanceIteratorNum)); // Initialize this value to the first tangent	
 		tangent_current = tangent_prev;
